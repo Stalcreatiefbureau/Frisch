@@ -3,12 +3,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // CONFIG
   // ============================================
   const PRIJZEN = {
-    meubelreiniging: { eersteZitplaats: 80, perExtraZitplaats: 20 },
+    voorrijkosten: 60, // eenmalig bij meubel/tapijt/impregneren (niet bij overig)
+    meubelreiniging: { perZitplaats: 20 },
     tapijtreiniging: { perM2: 8.75 },
     impregneren_meubels: { perZitplaatsTot4: 10, perZitplaatsNa4: 5 },
     impregneren_tapijt: { perM2: 2, gratisVanafM2: 12 },
-    overig_auto: { vastTot5: 99 },
-    overig_caravan: { vastTot7: 150 }
+    overig_auto: { vast: 150 }
   };
 
   const fadeDuration = 0.4;
@@ -148,18 +148,30 @@ document.addEventListener('DOMContentLoaded', () => {
   // ============================================
   function berekenPrijzen() {
     const lijst = [];
-
+    
+    // Voorrijkosten alleen bij meubel/tapijt/impregneren (NIET bij overig alleen)
+    const heeftHoofddienst = state.diensten.meubelreiniging || 
+                              state.diensten.tapijtreiniging || 
+                              state.diensten.impregneren;
+    
+    if (heeftHoofddienst) {
+      lijst.push({
+        titel: 'Voorrijkosten',
+        subtitel: 'Eenmalig',
+        prijs: PRIJZEN.voorrijkosten
+      });
+    }
+  
     if (state.diensten.meubelreiniging) {
       const zit = state.zitplaatsen;
-      const prijs = PRIJZEN.meubelreiniging.eersteZitplaats +
-                    Math.max(0, zit - 1) * PRIJZEN.meubelreiniging.perExtraZitplaats;
+      const prijs = zit * PRIJZEN.meubelreiniging.perZitplaats;
       lijst.push({
         titel: 'Meubelreiniging',
         subtitel: `${zit} ${zit === 1 ? 'zitplaats' : 'zitplaatsen'}`,
         prijs: prijs
       });
     }
-
+  
     if (state.diensten.tapijtreiniging) {
       const m2 = state.m2_tapijt;
       const prijs = m2 * PRIJZEN.tapijtreiniging.perM2;
@@ -169,9 +181,8 @@ document.addEventListener('DOMContentLoaded', () => {
         prijs: prijs
       });
     }
-
+  
     if (state.diensten.impregneren) {
-      // Impregneren wordt toegepast op wat ze laten reinigen
       if (state.diensten.meubelreiniging) {
         const zit = state.zitplaatsen;
         let prijs = 0;
@@ -201,21 +212,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
     }
-
+  
     if (state.diensten.overig) {
-      let prijs, titel, subtitel;
-      if (state.type_overig === 'auto' || state.type_overig === 'Auto-interieur') {
-        prijs = PRIJZEN.overig_auto.vastTot5;
-        titel = 'Auto-interieur';
-        subtitel = 'tot 5 zitplaatsen';
-      } else {
-        prijs = PRIJZEN.overig_caravan.vastTot7;
-        titel = 'Caravan/Camper/Boot';
-        subtitel = 'tot 7 zitplaatsen';
-      }
-      lijst.push({ titel, subtitel, prijs });
+      lijst.push({ 
+        titel: 'Auto-interieur', 
+        subtitel: 'Vaste prijs',
+        prijs: PRIJZEN.overig_auto.vast 
+      });
     }
-
+  
     return lijst;
   }
 
