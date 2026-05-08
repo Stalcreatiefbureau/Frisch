@@ -189,16 +189,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (state.diensten.tapijtreiniging) {
         const m2 = state.m2_tapijt;
-        const betaaldeM2 = Math.max(0, m2 - PRIJZEN.impregneren_tapijt.gratisVanafM2);
-        // "na 12m² gratis" interpreteer ik als: alles boven 12m² is gratis
-        // dus eerste 12m² wel betalen
-        const teBetalen = m2 <= PRIJZEN.impregneren_tapijt.gratisVanafM2
-          ? m2
-          : PRIJZEN.impregneren_tapijt.gratisVanafM2;
-        const prijs = teBetalen * PRIJZEN.impregneren_tapijt.perM2;
+        const prijs = m2 >= PRIJZEN.impregneren_tapijt.gratisVanafM2
+          ? 0
+          : m2 * PRIJZEN.impregneren_tapijt.perM2;
         lijst.push({
           titel: 'Impregneren tapijt',
-          subtitel: `${m2} m²`,
+          subtitel: m2 >= PRIJZEN.impregneren_tapijt.gratisVanafM2
+            ? `${m2} m² (gratis vanaf 12 m²)`
+            : `${m2} m²`,
           prijs: prijs
         });
       }
