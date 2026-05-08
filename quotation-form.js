@@ -567,13 +567,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Submit-validatie (laatste stap)
   const form = document.querySelector('form');
+  const submitBtn = form?.querySelector('input[type="submit"], button[type="submit"]');
+
+  if (submitBtn) {
+    submitBtn.addEventListener('click', (e) => {
+      validationActive[4] = true;
+      if (!validateStep(4)) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return false;
+      }
+    }, true);
+  }
+  
   if (form) {
     form.addEventListener('submit', (e) => {
       validationActive[4] = true;
       if (!validateStep(4)) {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return false;
       }
-    });
+    }, true);
   }
 
   // ============================================
