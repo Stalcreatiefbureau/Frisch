@@ -4,21 +4,26 @@
 // ============================================
 //
 // PRIJZEN AANPASSEN: zie het PRIJZEN object hieronder.
-// VALIDATIE-REGELS: zie het VALIDATION object onder PRIJZEN.
 //
 // Prijslogica (geldend per mei 2026):
-// - Voorrijkosten: €60 eenmalig (alleen bij meubel/tapijt/impregneren, NIET bij auto-interieur)
+// - Voorrijkosten: €60 eenmalig (bij meubel/tapijt/impregneren, NIET bij auto-interieur)
 // - Meubelreiniging: €20 per zitplaats
 // - Tapijtreiniging: €8,75 per m²
 // - Impregneren meubels: €10/zitplaats tot 4 zitplaatsen, €5/zitplaats vanaf 5e
 // - Impregneren tapijt: €2/m², GRATIS vanaf 12 m²
 // - Auto-interieur: €150 vast
 //
+// Impregneren logica:
+// - Bij meubelreiniging + impregneren → impregneren meubels
+// - Bij tapijtreiniging + impregneren → impregneren tapijt
+// - Bij ALLEEN impregneren (geen reiniging) → klant kiest type via stap 2 select
+//   (meubels / tapijt / beide)
+//
 // ============================================
 
 document.addEventListener('DOMContentLoaded', () => {
   // ============================================
-  // CONFIG — pas hier de prijzen aan
+  // CONFIG
   // ============================================
   const PRIJZEN = {
     voorrijkosten: 60,
@@ -27,16 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
     impregneren_meubels: { perZitplaatsTot4: 10, perZitplaatsNa4: 5 },
     impregneren_tapijt: { perM2: 2, gratisVanafM2: 12 },
     auto_interieur: { vast: 150 }
-  };
-
-  // ============================================
-  // VALIDATIE — welke velden zijn verplicht per stap
-  // ============================================
-  const VALIDATIE_PER_STAP = {
-    1: ['diensten'],
-    2: ['voorkeur_dag', 'zitplaatsen_indien_relevant', 'm2_indien_relevant'],
-    3: [],
-    4: ['voornaam', 'achternaam', 'telefoonnummer', 'email', 'straat', 'plaats', 'postcode', 'land']
   };
 
   const fadeDuration = 0.4;
@@ -51,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let currentStep = 1;
   let isAnimating = false;
-  let validationActive = { 1: false, 2: false, 3: false, 4: false }; // pas validatie tonen na 1e Volgende-klik
+  let validationActive = { 1: false, 2: false, 3: false, 4: false };
   const totalSteps = steps.length;
 
   const state = {
@@ -63,8 +58,38 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     zitplaatsen: 1,
     m2_tapijt: 0,
+    impregneren_type: '', // 'meubels', 'tapijt', 'beide' — alleen relevant bij losstaand impregneren
     kortingscode: null
   };
+
+  // ============================================
+  // HELPERS — bepaal welke impregneren actief is
+  // ============================================
+  function impregneertMeubels() {
+    if (!state.diensten.impregneren) return false;
+    // Als meubelreiniging is gekozen, impregneren we automatisch meubels
+    if (state.diensten.meubelreiniging) return true;
+    // Als alleen impregneren (zonder enige reiniging), gebruik de keuze van de klant
+    if (!state.diensten.tapijtreiniging) {
+      return state.impregneren_type === 'meubels' || state.impregneren_type === 'beide';
+    }
+    return false;
+  }
+
+  function impregneertTapijt() {
+    if (!state.diensten.impregneren) return false;
+    if (state.diensten.tapijtreiniging) return true;
+    if (!state.diensten.meubelreiniging) {
+      return state.impregneren_type === 'tapijt' || state.impregneren_type === 'beide';
+    }
+    return false;
+  }
+
+  function isLosstaandImpregneren() {
+    return state.diensten.impregneren &&
+           !state.diensten.meubelreiniging &&
+           !state.diensten.tapijtreiniging;
+  }
 
   // ============================================
   // STEP NAVIGATION
@@ -130,21 +155,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const zitInput = document.querySelector('[name="zitplaatsen"]');
     const m2Input = document.querySelector('[name="m2_tapijt"]');
+    const impTypeInput = document.querySelector('[name="impregneren_type"]');
 
     if (zitInput) state.zitplaatsen = parseInt(zitInput.value) || 1;
     if (m2Input) state.m2_tapijt = parseFloat(m2Input.value) || 0;
+    if (impTypeInput) state.impregneren_type = impTypeInput.value || '';
   }
 
   function updateConditionalFields() {
     const zitField = document.querySelector('[data-field="zitplaatsen"]');
     const m2Field = document.querySelector('[data-field="m2_tapijt"]');
+    const impTypeField = document.querySelector('[data-field="impregneren_type"]');
 
+    // Type-keuze verschijnt alleen bij losstaand impregneren
+    const showImpType = isLosstaandImpregneren();
+
+    // Zitplaatsen: bij meubelreiniging, OF bij losstaand impregneren met type "meubels" of "beide"
     const showZit = state.diensten.meubelreiniging ||
-                    (state.diensten.impregneren && state.diensten.meubelreiniging);
-    const showM2 = state.diensten.tapijtreiniging;
+                    (showImpType && (state.impregneren_type === 'meubels' || state.impregneren_type === 'beide'));
+
+    // M²: bij tapijtreiniging, OF bij losstaand impregneren met type "tapijt" of "beide"
+    const showM2 = state.diensten.tapijtreiniging ||
+                   (showImpType && (state.impregneren_type === 'tapijt' || state.impregneren_type === 'beide'));
 
     if (zitField) zitField.style.display = showZit ? '' : 'none';
     if (m2Field) m2Field.style.display = showM2 ? '' : 'none';
+    if (impTypeField) impTypeField.style.display = showImpType ? '' : 'none';
   }
 
   // ============================================
@@ -167,7 +203,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function validatePostcode(postcode, land) {
-    // NL: 1234 AB / 1234AB. BE: 4 cijfers.
     const clean = postcode.trim().toUpperCase().replace(/\s+/g, '');
     if (land === 'België' || land === 'Belgie' || land === 'BE') {
       return /^\d{4}$/.test(clean);
@@ -180,7 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
     updateState();
 
     if (stepNumber === 1) {
-      // Minstens 1 dienst gekozen
       const heeftDienst = state.diensten.meubelreiniging ||
                           state.diensten.tapijtreiniging ||
                           state.diensten.impregneren ||
@@ -199,7 +233,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (stepNumber === 2) {
-      // Zitplaatsen verplicht als veld zichtbaar is
+      // Impregneren type — verplicht bij losstaand impregneren
+      const impTypeField = document.querySelector('[data-field="impregneren_type"]');
+      if (impTypeField && impTypeField.style.display !== 'none') {
+        const impTypeInput = document.querySelector('[name="impregneren_type"]');
+        if (!impTypeInput.value) {
+          showError('impregneren_type', impTypeInput);
+          isValid = false;
+        } else {
+          clearError('impregneren_type', impTypeInput);
+        }
+      }
+
+      // Zitplaatsen
       const zitField = document.querySelector('[data-field="zitplaatsen"]');
       if (zitField && zitField.style.display !== 'none') {
         const zitInput = document.querySelector('[name="zitplaatsen"]');
@@ -211,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // m2 verplicht als veld zichtbaar is
+      // m2
       const m2Field = document.querySelector('[data-field="m2_tapijt"]');
       if (m2Field && m2Field.style.display !== 'none') {
         const m2Input = document.querySelector('[name="m2_tapijt"]');
@@ -224,7 +270,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // Voorkeur dag verplicht
       const dagInput = document.querySelector('[name="voorkeur_dag"]');
       if (dagInput && !dagInput.value) {
         showError('voorkeur_dag', dagInput);
@@ -278,11 +323,9 @@ document.addEventListener('DOMContentLoaded', () => {
     return isValid;
   }
 
-  // Live validatie tijdens typen — alleen als validatie al actief is voor deze stap
   function setupLiveValidation() {
     document.addEventListener('input', (e) => {
       if (!validationActive[currentStep]) return;
-      // Re-valideer alleen het ene veld
       const target = e.target;
       const name = target.name;
       if (!name) return;
@@ -292,7 +335,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('change', (e) => {
       if (!validationActive[currentStep]) return;
 
-      // Voor checkboxes (diensten) — herevalueer stap 1
       if (e.target.matches('[name^="dienst_"]')) {
         validateStep(1);
         return;
@@ -306,7 +348,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function revalidateField(name, input) {
-    // Bepaal welke validatieregel van toepassing is
     const value = input.value.trim();
     const landInput = document.querySelector('[name="land"]');
     const landValue = landInput ? landInput.value : '';
@@ -317,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
       valid = !!value && validateEmail(value);
     } else if (name === 'postcode') {
       valid = !!value && validatePostcode(value, landValue);
-    } else if (name === 'voorkeur_dag' || name === 'land') {
+    } else if (name === 'voorkeur_dag' || name === 'land' || name === 'impregneren_type') {
       valid = !!value;
     } else if (name === 'zitplaatsen') {
       valid = !!value;
@@ -327,7 +368,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (name === 'telefoonnummer') {
       valid = !!value && value.length >= 8;
     } else {
-      // Standaard: niet leeg + minimaal 2 chars
       valid = !!value && value.length >= 2;
     }
 
@@ -344,6 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function berekenPrijzen() {
     const lijst = [];
 
+    // Voorrijkosten bij elke dienst behalve alleen auto-interieur
     const heeftHoofddienst = state.diensten.meubelreiniging ||
                               state.diensten.tapijtreiniging ||
                               state.diensten.impregneren;
@@ -376,35 +417,36 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    if (state.diensten.impregneren) {
-      if (state.diensten.meubelreiniging) {
-        const zit = state.zitplaatsen;
-        let prijs = 0;
-        if (zit <= 4) {
-          prijs = zit * PRIJZEN.impregneren_meubels.perZitplaatsTot4;
-        } else {
-          prijs = 4 * PRIJZEN.impregneren_meubels.perZitplaatsTot4 +
-                  (zit - 4) * PRIJZEN.impregneren_meubels.perZitplaatsNa4;
-        }
-        lijst.push({
-          titel: 'Impregneren meubels',
-          subtitel: `${zit} ${zit === 1 ? 'zitplaats' : 'zitplaatsen'}`,
-          prijs: prijs
-        });
+    // Impregneren meubels — actief bij meubelreiniging, of bij losstaand impregneren met type meubels/beide
+    if (impregneertMeubels()) {
+      const zit = state.zitplaatsen;
+      let prijs = 0;
+      if (zit <= 4) {
+        prijs = zit * PRIJZEN.impregneren_meubels.perZitplaatsTot4;
+      } else {
+        prijs = 4 * PRIJZEN.impregneren_meubels.perZitplaatsTot4 +
+                (zit - 4) * PRIJZEN.impregneren_meubels.perZitplaatsNa4;
       }
-      if (state.diensten.tapijtreiniging) {
-        const m2 = state.m2_tapijt;
-        const prijs = m2 >= PRIJZEN.impregneren_tapijt.gratisVanafM2
-          ? 0
-          : m2 * PRIJZEN.impregneren_tapijt.perM2;
-        lijst.push({
-          titel: 'Impregneren tapijt',
-          subtitel: m2 >= PRIJZEN.impregneren_tapijt.gratisVanafM2
-            ? `${m2} m² (gratis vanaf 12 m²)`
-            : `${m2} m²`,
-          prijs: prijs
-        });
-      }
+      lijst.push({
+        titel: 'Impregneren meubels',
+        subtitel: `${zit} ${zit === 1 ? 'zitplaats' : 'zitplaatsen'}`,
+        prijs: prijs
+      });
+    }
+
+    // Impregneren tapijt — actief bij tapijtreiniging, of bij losstaand impregneren met type tapijt/beide
+    if (impregneertTapijt()) {
+      const m2 = state.m2_tapijt;
+      const prijs = m2 >= PRIJZEN.impregneren_tapijt.gratisVanafM2
+        ? 0
+        : m2 * PRIJZEN.impregneren_tapijt.perM2;
+      lijst.push({
+        titel: 'Impregneren tapijt',
+        subtitel: m2 >= PRIJZEN.impregneren_tapijt.gratisVanafM2
+          ? `${m2} m² (gratis vanaf 12 m²)`
+          : `${m2} m²`,
+        prijs: prijs
+      });
     }
 
     if (state.diensten.auto_interieur) {
@@ -512,7 +554,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('change', (e) => {
     if (e.target.matches('[name^="dienst_"]') ||
         e.target.matches('[name="zitplaatsen"]') ||
-        e.target.matches('[name="m2_tapijt"]')) {
+        e.target.matches('[name="m2_tapijt"]') ||
+        e.target.matches('[name="impregneren_type"]')) {
       updateState();
       updateConditionalFields();
     }
@@ -524,22 +567,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Volgende-knoppen MET validatie
   nextButtons.forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-
-      // Activeer validatie voor huidige stap
       validationActive[currentStep] = true;
-
-      // Valideer
-      if (!validateStep(currentStep)) {
-        return; // niet doorgaan
-      }
-
-      if (currentStep < totalSteps) {
-        showStep(currentStep + 1);
-      }
+      if (!validateStep(currentStep)) return;
+      if (currentStep < totalSteps) showStep(currentStep + 1);
     });
   });
 
@@ -565,7 +598,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Submit-validatie (laatste stap)
   const form = document.querySelector('form');
   const submitBtn = form?.querySelector('input[type="submit"], button[type="submit"]');
 
@@ -580,7 +612,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }, true);
   }
-  
+
   if (form) {
     form.addEventListener('submit', (e) => {
       validationActive[4] = true;
@@ -593,9 +625,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }, true);
   }
 
-  // ============================================
-  // INIT
-  // ============================================
   steps.forEach(step => {
     if (parseInt(step.dataset.formStep) !== 1) {
       step.classList.remove('is-active');
