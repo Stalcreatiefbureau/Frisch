@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return `€${bedrag.toLocaleString('nl-NL', {
       minimumFractionDigits: bedrag % 1 === 0 ? 0 : 2,
       maximumFractionDigits: 2
-    })},-`;
+    })}`;
   }
 
   // ============================================
