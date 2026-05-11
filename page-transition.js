@@ -302,5 +302,103 @@ function initBarbaNavUpdate(data) {
 
 
 // -----------------------------------------
-// YOUR FUNCTIONS GO BELOW HERE
+// PAGE TRANSITIONS
 // -----------------------------------------
+
+gsap.registerPlugin(DrawSVGPlugin);
+
+function runPageOnceAnimation(next) {
+  const tl = gsap.timeline();
+
+  tl.call(() => {
+    resetPage(next);
+  }, null, 0);
+
+  return tl;
+}
+
+function runPageLeaveAnimation(current, next) {
+  const transitionWrap = document.querySelector("[data-transition-wrap]");
+  const transitionSVGPath = transitionWrap.querySelectorAll("svg path");
+  
+  const tl = gsap.timeline({
+    onComplete: () => { current.remove() }
+  });
+  
+  if (reducedMotion) {
+    // Immediate swap behavior if user prefers reduced motion
+    return tl.set(current, { autoAlpha: 0 });
+  }
+  
+  tl.set(next, {
+    autoAlpha: 0,
+  }, 0);
+  
+  tl.set(transitionSVGPath, {
+    strokeWidth: "5%",
+    drawSVG: '0% 0%',
+  });
+  
+  tl.to(transitionSVGPath, {
+    duration: 1,
+    drawSVG: '0% 85%',
+    ease: "Power1.easeInOut"
+  });
+  
+  tl.to(transitionSVGPath, {
+    strokeWidth: "30%",
+    duration: 0.75,
+    ease: "Power1.easeInOut"
+  }, "< 0.25");
+
+  return tl;
+}
+
+function runPageEnterAnimation(next){
+  const transitionWrap = document.querySelector("[data-transition-wrap]");
+  const transitionSVGPath = transitionWrap.querySelectorAll("svg path");
+  
+  const tl = gsap.timeline();
+  
+  if (reducedMotion) {
+    // Immediate swap behavior if user prefers reduced motion
+    tl.set(next, { autoAlpha: 1 });
+    tl.add("pageReady")
+    tl.call(resetPage, [next], "pageReady");
+    return new Promise(resolve => tl.call(resolve, null, "pageReady"));
+  }
+  
+  tl.add("startEnter", 1);
+  
+  tl.set(next, {
+    autoAlpha: 1,
+  }, "startEnter");
+  
+  tl.set(transitionSVGPath, {
+    drawSVG: '0% 100%',
+  });
+  
+  tl.to(transitionSVGPath, {
+    duration: 1.25,
+    drawSVG: '100% 100%',
+    strokeWidth: "5%",
+    ease: "Power1.easeInOut",
+  }, "startEnter");
+  
+  tl.fromTo(next.querySelector('h1'), {
+    yPercent: 25,
+    autoAlpha: 0,
+  }, {
+    yPercent: 0,
+    autoAlpha: 1,
+    ease: "expo.out",
+    duration: 1,
+  }, "< 0.75");
+
+  tl.add("pageReady");
+  tl.call(resetPage, [next], "pageReady");
+
+  return new Promise(resolve => {
+    tl.call(resolve, null, "pageReady");
+  });
+}
