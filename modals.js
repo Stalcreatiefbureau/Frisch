@@ -1,20 +1,25 @@
 // ============================================
-// MODAL — werkt voor zowel single modals (ID-based)
-// als CMS modals (relatief binnen parent)
+// FRISCH MODAL — werkt voor zowel single modals (ID-based)
+// als CMS modals (relatief binnen parent) (Barba-compatible)
 // ============================================
-function setupModals() {
-  const openTriggers = document.querySelectorAll('[data-modal-open]');
+
+function setupModals(container = document) {
+  const openTriggers = container.querySelectorAll('[data-modal-open]');
 
   openTriggers.forEach(trigger => {
+    if (trigger.dataset.modalTriggerInit === 'true') return;
+    trigger.dataset.modalTriggerInit = 'true';
+
     trigger.addEventListener('click', (e) => {
       e.preventDefault();
       const modalId = trigger.getAttribute('data-modal-open');
-      
+
       let modal;
-      
+
       if (modalId) {
         // Single modal mode (Frisch zitplaatsen)
-        modal = document.querySelector(`[data-modal="${modalId}"]`);
+        modal = container.querySelector(`[data-modal="${modalId}"]`)
+             || document.querySelector(`[data-modal="${modalId}"]`);
       } else {
         // CMS mode: zoek modal binnen dichtsbijzijnde parent
         const parent = trigger.closest('[data-modal-parent]');
@@ -22,31 +27,37 @@ function setupModals() {
           modal = parent.querySelector('[data-modal]');
         }
       }
-      
+
       if (!modal) return;
       openModal(modal);
     });
   });
 
-  // Close triggers
-  document.querySelectorAll('[data-modal-close]').forEach(closeBtn => {
+  // Close triggers binnen deze container
+  container.querySelectorAll('[data-modal-close]').forEach(closeBtn => {
+    if (closeBtn.dataset.modalCloseInit === 'true') return;
+    closeBtn.dataset.modalCloseInit = 'true';
+
     closeBtn.addEventListener('click', () => {
       const modal = closeBtn.closest('[data-modal]');
       closeModal(modal);
     });
   });
 
-  // Escape key
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      document.querySelectorAll('[data-modal].is-active').forEach(closeModal);
-    }
-  });
+  // Escape key — alleen één keer global binden
+  if (!window._modalEscapeBound) {
+    window._modalEscapeBound = true;
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('[data-modal].is-active').forEach(closeModal);
+      }
+    });
+  }
 }
 
 function openModal(modal) {
   if (!modal) return;
-  
+
   modal.classList.add('is-active');
   document.body.classList.add('modal-open');
 
@@ -80,5 +91,3 @@ function closeModal(modal) {
     }
   });
 }
-
-document.addEventListener('DOMContentLoaded', setupModals);
