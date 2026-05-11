@@ -1,8 +1,9 @@
 // -----------------------------------------
-// OSMO PAGE TRANSITION BOILERPLATE
+// FRISCH PAGE TRANSITIONS (Osmo + Barba)
+// Centrale orchestrator — roept alle init-functies aan via Barba hooks
 // -----------------------------------------
 
-gsap.registerPlugin(CustomEase);
+gsap.registerPlugin(CustomEase, DrawSVGPlugin);
 
 history.scrollRestoration = "manual";
 
@@ -16,7 +17,7 @@ const hasScrollTrigger = typeof window.ScrollTrigger !== "undefined";
 const rmMQ = window.matchMedia("(prefers-reduced-motion: reduce)");
 let reducedMotion = rmMQ.matches;
 rmMQ.addEventListener?.("change", e => (reducedMotion = e.matches));
-rmMQ.addListener?.(e => (reducedMotion = e.matches)); 
+rmMQ.addListener?.(e => (reducedMotion = e.matches));
 
 const has = (s) => !!nextPage.querySelector(s);
 
@@ -26,8 +27,6 @@ let durationDefault = 0.6;
 CustomEase.create("osmo", "0.625, 0.05, 0, 1");
 gsap.defaults({ ease: "osmo", duration: durationDefault });
 
-
-
 // -----------------------------------------
 // FUNCTION REGISTRY
 // -----------------------------------------
@@ -36,35 +35,33 @@ function initOnceFunctions() {
   initLenis();
   if (onceFunctionsInitialized) return;
   onceFunctionsInitialized = true;
-  
-  // Runs once on first load
-  // if (has('[data-something]')) initSomething();
+
+  // Dingen die maar één keer hoeven (buiten Barba container)
+  // bijv. globale navbar, footer modals, etc.
 }
 
 function initBeforeEnterFunctions(next) {
   nextPage = next || document;
-  
-  // Runs before the enter animation
-  // if (has('[data-something]')) initSomething();
+  // Runs before the enter animation — initial states zetten
 }
 
 function initAfterEnterFunctions(next) {
   nextPage = next || document;
-  
-  // Runs after enter animation completes
-  // if (has('[data-something]')) initSomething();
-  
-  
-  if(hasLenis){
-    lenis.resize();
-  }
-  
-  if (hasScrollTrigger) {
-    ScrollTrigger.refresh();
-  }
+
+  // ALLE container-specifieke animaties hier
+  if (has('[data-accordion-css-init]')) initAccordionCSS(nextPage);
+  if (has('[data-marquee-scroll-direction-target]')) initMarqueeScrollDirection(nextPage);
+  if (has('[data-draggable-marquee-init]')) initDraggableMarquee(nextPage);
+  if (has('.section_steps-horizontal')) initHorizontalScroll(nextPage);
+  if (has('.slider_wrap')) initPortfolioSlider(nextPage);
+  if (has('[data-calc="dienst"]')) initTarievenCalculator(nextPage);
+  if (has('[data-form-step]')) initQuotationForm(nextPage);
+  if (has('[data-modal-open]') || has('[data-modal-parent]')) setupModals(nextPage);
+
+  // Refreshes als laatste
+  if (hasLenis) lenis.resize();
+  if (hasScrollTrigger) ScrollTrigger.refresh();
 }
-
-
 
 // -----------------------------------------
 // PAGE TRANSITIONS
@@ -72,47 +69,62 @@ function initAfterEnterFunctions(next) {
 
 function runPageOnceAnimation(next) {
   const tl = gsap.timeline();
-
-  tl.call(() => {
-    resetPage(next)
-  }, null, 0);
-
+  tl.call(() => { resetPage(next); }, null, 0);
   return tl;
 }
 
 function runPageLeaveAnimation(current, next) {
+  const transitionWrap = document.querySelector("[data-transition-wrap]");
+  const transitionSVGPath = transitionWrap?.querySelectorAll("svg path");
+
   const tl = gsap.timeline({
-    onComplete: () => { current.remove() }
+    onComplete: () => { current.remove(); }
   });
-  
-  if (reducedMotion) {
-    // Immediate swap behavior if user prefers reduced motion
+
+  if (reducedMotion || !transitionSVGPath?.length) {
     return tl.set(current, { autoAlpha: 0 });
   }
 
-  tl.to(current, { autoAlpha: 0, duration: 0.4 });
+  tl.set(next, { autoAlpha: 0 }, 0);
+  tl.set(transitionSVGPath, { strokeWidth: "5%", drawSVG: '0% 0%' });
+  tl.to(transitionSVGPath, { duration: 1, drawSVG: '0% 85%', ease: "Power1.easeInOut" });
+  tl.to(transitionSVGPath, { strokeWidth: "30%", duration: 0.75, ease: "Power1.easeInOut" }, "< 0.25");
 
   return tl;
 }
 
-function runPageEnterAnimation(next){
+function runPageEnterAnimation(next) {
+  const transitionWrap = document.querySelector("[data-transition-wrap]");
+  const transitionSVGPath = transitionWrap?.querySelectorAll("svg path");
+
   const tl = gsap.timeline();
-  
-  if (reducedMotion) {
-    // Immediate swap behavior if user prefers reduced motion
+
+  if (reducedMotion || !transitionSVGPath?.length) {
     tl.set(next, { autoAlpha: 1 });
-    tl.add("pageReady")
+    tl.add("pageReady");
     tl.call(resetPage, [next], "pageReady");
     return new Promise(resolve => tl.call(resolve, null, "pageReady"));
   }
-  
-  tl.add("startEnter", 0.6);
-  
-  tl.fromTo(next, {
-    autoAlpha: 0,
-  },{
-    autoAlpha: 1,
+
+  tl.add("startEnter", 1);
+  tl.set(next, { autoAlpha: 1 }, "startEnter");
+  tl.set(transitionSVGPath, { drawSVG: '0% 100%' });
+  tl.to(transitionSVGPath, {
+    duration: 1.25,
+    drawSVG: '100% 100%',
+    strokeWidth: "5%",
+    ease: "Power1.easeInOut",
   }, "startEnter");
+
+  const h1 = next.querySelector('h1');
+  if (h1) {
+    tl.fromTo(h1, {
+      yPercent: 25, autoAlpha: 0,
+    }, {
+      yPercent: 0, autoAlpha: 1,
+      ease: "expo.out", duration: 1,
+    }, "< 0.75");
+  }
 
   tl.add("pageReady");
   tl.call(resetPage, [next], "pageReady");
@@ -122,75 +134,67 @@ function runPageEnterAnimation(next){
   });
 }
 
-
 // -----------------------------------------
 // BARBA HOOKS + INIT
 // -----------------------------------------
 
 barba.hooks.beforeEnter(data => {
-  // Position new container on top
   gsap.set(data.next.container, {
     position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
+    top: 0, left: 0, right: 0,
   });
-  
+
   if (lenis && typeof lenis.stop === "function") {
     lenis.stop();
   }
-  
+
   initBeforeEnterFunctions(data.next.container);
   applyThemeFrom(data.next.container);
 });
 
-barba.hooks.afterLeave(() => {
-  if(hasScrollTrigger){
+barba.hooks.afterLeave((data) => {
+  if (hasScrollTrigger) {
     ScrollTrigger.getAll().forEach(trigger => trigger.kill());
   }
+  // Kill animaties op de oude container
+  killPageAnimations(data.current.container);
 });
 
 barba.hooks.enter(data => {
   initBarbaNavUpdate(data);
-})
+});
 
 barba.hooks.afterEnter(data => {
-  // Run page functions
   initAfterEnterFunctions(data.next.container);
-  
-  // Settle
-  if(hasLenis){
+
+  if (hasLenis) {
     lenis.resize();
-    lenis.start();    
+    lenis.start();
   }
-  
-  if(hasScrollTrigger){
-    ScrollTrigger.refresh(); 
+  if (hasScrollTrigger) {
+    ScrollTrigger.refresh();
   }
 });
 
 barba.init({
-  debug: true, // Set to 'false' in production
+  debug: true,
   timeout: 7000,
   preventRunning: true,
   transitions: [
     {
       name: "default",
       sync: true,
-      
-      // First load
+
       async once(data) {
         initOnceFunctions();
-
+        initAfterEnterFunctions(data.next.container);  // ← cruciaal voor eerste pagina
         return runPageOnceAnimation(data.next.container);
       },
 
-      // Current page leaves
       async leave(data) {
         return runPageLeaveAnimation(data.current.container, data.next.container);
       },
 
-      // New page enters
       async enter(data) {
         return runPageEnterAnimation(data.next.container);
       }
@@ -198,41 +202,64 @@ barba.init({
   ],
 });
 
+// -----------------------------------------
+// CLEANUP HELPER
+// -----------------------------------------
 
+function killPageAnimations(container) {
+  if (!container) return;
+
+  // Kill marquees
+  container.querySelectorAll('[data-draggable-marquee-init], [data-marquee-scroll-direction-target]').forEach(el => {
+    if (el._marqueeAnimation) {
+      el._marqueeAnimation.kill();
+      el._marqueeAnimation = null;
+    }
+    if (el._marqueeLoop) {
+      el._marqueeLoop.kill();
+      el._marqueeLoop = null;
+    }
+    if (el._marqueeObserver) {
+      el._marqueeObserver.kill();
+      el._marqueeObserver = null;
+    }
+  });
+
+  // Kill portfolio slider
+  const sliderTrack = container.querySelector('.slider_track');
+  if (sliderTrack && sliderTrack._draggable) {
+    sliderTrack._draggable.forEach(d => d.kill());
+    sliderTrack._draggable = null;
+  }
+  if (container._sliderAutoplay) {
+    clearInterval(container._sliderAutoplay);
+    container._sliderAutoplay = null;
+  }
+}
 
 // -----------------------------------------
 // GENERIC + HELPERS
 // -----------------------------------------
 
 const themeConfig = {
-  light: {
-    nav: "dark",
-    transition: "light"
-  },
-  dark: {
-    nav: "light",
-    transition: "dark"
-  }
+  light: { nav: "dark", transition: "light" },
+  dark: { nav: "light", transition: "dark" }
 };
 
 function applyThemeFrom(container) {
   const pageTheme = container?.dataset?.pageTheme || "light";
   const config = themeConfig[pageTheme] || themeConfig.light;
-  
+
   document.body.dataset.pageTheme = pageTheme;
   const transitionEl = document.querySelector('[data-theme-transition]');
-  if (transitionEl) {
-    transitionEl.dataset.themeTransition = config.transition;
-  }
+  if (transitionEl) transitionEl.dataset.themeTransition = config.transition;
 
   const nav = document.querySelector('[data-theme-nav]');
-  if (nav) {
-    nav.dataset.themeNav = config.nav;
-  }
+  if (nav) nav.dataset.themeNav = config.nav;
 }
 
 function initLenis() {
-  if (lenis) return; // already created
+  if (lenis) return;
   if (!hasLenis) return;
 
   lenis = new Lenis({
@@ -244,161 +271,38 @@ function initLenis() {
     lenis.on("scroll", ScrollTrigger.update);
   }
 
-  gsap.ticker.add((time) => {
-    lenis.raf(time * 1000);
-  });
-
+  gsap.ticker.add((time) => { lenis.raf(time * 1000); });
   gsap.ticker.lagSmoothing(0);
 }
 
-function resetPage(container){
+function resetPage(container) {
   window.scrollTo(0, 0);
   gsap.set(container, { clearProps: "position,top,left,right" });
-  
-  if(hasLenis){
+
+  if (hasLenis) {
     lenis.resize();
-    lenis.start();    
+    lenis.start();
   }
 }
 
-function debounceOnWidthChange(fn, ms) {
-  let last = innerWidth,
-    timer;
-  return function (...args) {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      if (innerWidth !== last) {
-        last = innerWidth;
-        fn.apply(this, args);
-      }
-    }, ms);
-  };
-}
-
 function initBarbaNavUpdate(data) {
-  var tpl = document.createElement('template');
+  const tpl = document.createElement('template');
   tpl.innerHTML = data.next.html.trim();
-  var nextNodes = tpl.content.querySelectorAll('[data-barba-update]');
-  var currentNodes = document.querySelectorAll('nav [data-barba-update]');
+  const nextNodes = tpl.content.querySelectorAll('[data-barba-update]');
+  const currentNodes = document.querySelectorAll('nav [data-barba-update]');
 
-  currentNodes.forEach(function (curr, index) {
-    var next = nextNodes[index];
+  currentNodes.forEach((curr, index) => {
+    const next = nextNodes[index];
     if (!next) return;
 
-    // Aria-current sync
-    var newStatus = next.getAttribute('aria-current');
+    const newStatus = next.getAttribute('aria-current');
     if (newStatus !== null) {
       curr.setAttribute('aria-current', newStatus);
     } else {
       curr.removeAttribute('aria-current');
     }
 
-    // Class list sync
-    var newClassList = next.getAttribute('class') || '';
+    const newClassList = next.getAttribute('class') || '';
     curr.setAttribute('class', newClassList);
-  });
-}
-
-
-
-// -----------------------------------------
-// PAGE TRANSITIONS
-// -----------------------------------------
-
-gsap.registerPlugin(DrawSVGPlugin);
-
-function runPageOnceAnimation(next) {
-  const tl = gsap.timeline();
-
-  tl.call(() => {
-    resetPage(next);
-  }, null, 0);
-
-  return tl;
-}
-
-function runPageLeaveAnimation(current, next) {
-  const transitionWrap = document.querySelector("[data-transition-wrap]");
-  const transitionSVGPath = transitionWrap.querySelectorAll("svg path");
-  
-  const tl = gsap.timeline({
-    onComplete: () => { current.remove() }
-  });
-  
-  if (reducedMotion) {
-    // Immediate swap behavior if user prefers reduced motion
-    return tl.set(current, { autoAlpha: 0 });
-  }
-  
-  tl.set(next, {
-    autoAlpha: 0,
-  }, 0);
-  
-  tl.set(transitionSVGPath, {
-    strokeWidth: "5%",
-    drawSVG: '0% 0%',
-  });
-  
-  tl.to(transitionSVGPath, {
-    duration: 1,
-    drawSVG: '0% 85%',
-    ease: "Power1.easeInOut"
-  });
-  
-  tl.to(transitionSVGPath, {
-    strokeWidth: "30%",
-    duration: 0.75,
-    ease: "Power1.easeInOut"
-  }, "< 0.25");
-
-  return tl;
-}
-
-function runPageEnterAnimation(next){
-  const transitionWrap = document.querySelector("[data-transition-wrap]");
-  const transitionSVGPath = transitionWrap.querySelectorAll("svg path");
-  
-  const tl = gsap.timeline();
-  
-  if (reducedMotion) {
-    // Immediate swap behavior if user prefers reduced motion
-    tl.set(next, { autoAlpha: 1 });
-    tl.add("pageReady")
-    tl.call(resetPage, [next], "pageReady");
-    return new Promise(resolve => tl.call(resolve, null, "pageReady"));
-  }
-  
-  tl.add("startEnter", 1);
-  
-  tl.set(next, {
-    autoAlpha: 1,
-  }, "startEnter");
-  
-  tl.set(transitionSVGPath, {
-    drawSVG: '0% 100%',
-  });
-  
-  tl.to(transitionSVGPath, {
-    duration: 1.25,
-    drawSVG: '100% 100%',
-    strokeWidth: "5%",
-    ease: "Power1.easeInOut",
-  }, "startEnter");
-  
-  tl.fromTo(next.querySelector('h1'), {
-    yPercent: 25,
-    autoAlpha: 0,
-  }, {
-    yPercent: 0,
-    autoAlpha: 1,
-    ease: "expo.out",
-    duration: 1,
-  }, "< 0.75");
-
-  tl.add("pageReady");
-  tl.call(resetPage, [next], "pageReady");
-
-  return new Promise(resolve => {
-    tl.call(resolve, null, "pageReady");
   });
 }
