@@ -1,15 +1,9 @@
 // ============================================
-// FRISCH TARIEVEN CALCULATOR
+// FRISCH TARIEVEN CALCULATOR (Barba-compatible)
 // Snelle prijsindicatie op tarievenpagina (geen submit, live update)
 // ============================================
-//
-// PRIJZEN AANPASSEN: pas hetzelfde aan in beide bestanden
-// (quotation-form.js en tarieven-calculator.js) of zorg dat je ze
-// samen pusht.
-//
-// ============================================
 
-document.addEventListener('DOMContentLoaded', () => {
+function initTarievenCalculator(container = document) {
   const PRIJZEN = {
     voorrijkosten: 60,
     meubelreiniging: { perZitplaats: 20 },
@@ -19,28 +13,27 @@ document.addEventListener('DOMContentLoaded', () => {
     auto_interieur: { vast: 150 }
   };
 
-  const dienstSelect = document.querySelector('[data-calc="dienst"]');
-  if (!dienstSelect) return; // calculator niet aanwezig
+  const dienstSelect = container.querySelector('[data-calc="dienst"]');
+  if (!dienstSelect) return;
 
-  const zitSelect = document.querySelector('[data-calc="zitplaatsen"]');
-  const m2Input = document.querySelector('[data-calc="m2_tapijt"]');
-  const zitField = document.querySelector('[data-calc-field="zitplaatsen"]');
-  const m2Field = document.querySelector('[data-calc-field="m2_tapijt"]');
-  const resultWrap = document.querySelector('.calculator_result');
+  // Anti-dubbel-init
+  if (dienstSelect.dataset.calcInit === 'true') return;
+  dienstSelect.dataset.calcInit = 'true';
 
-  const voorrijEl = document.querySelector('[data-calc-result="voorrijkosten"]');
-  const dienstNaamEl = document.querySelector('[data-calc-result="dienstnaam"]');
-  const dienstPrijsEl = document.querySelector('[data-calc-result="dienstprijs"]');
-  const totaalEl = document.querySelector('[data-calc-result="totaal"]');
+  const zitSelect = container.querySelector('[data-calc="zitplaatsen"]');
+  const m2Input = container.querySelector('[data-calc="m2_tapijt"]');
+  const zitField = container.querySelector('[data-calc-field="zitplaatsen"]');
+  const m2Field = container.querySelector('[data-calc-field="m2_tapijt"]');
+  const resultWrap = container.querySelector('.calculator_result');
 
-  // Welke dienst gebruikt zitplaatsen, welke m²
+  const voorrijEl = container.querySelector('[data-calc-result="voorrijkosten"]');
+  const dienstNaamEl = container.querySelector('[data-calc-result="dienstnaam"]');
+  const dienstPrijsEl = container.querySelector('[data-calc-result="dienstprijs"]');
+  const totaalEl = container.querySelector('[data-calc-result="totaal"]');
+
   const ZITPLAATSEN_DIENSTEN = ['meubelreiniging', 'impregneren_meubels', 'auto_interieur'];
   const M2_DIENSTEN = ['tapijtreiniging', 'impregneren_tapijt'];
-
-  // Auto-interieur heeft GEEN voorrijkosten
   const VOORRIJKOSTEN_DIENSTEN = ['meubelreiniging', 'tapijtreiniging', 'impregneren_meubels', 'impregneren_tapijt'];
-
-  // Auto-interieur is vaste prijs, geen invoer nodig
   const VASTE_PRIJS_DIENSTEN = ['auto_interieur'];
 
   function formatPrijs(bedrag) {
@@ -62,12 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function berekenDienstprijs(dienst, hoeveelheid) {
-    if (dienst === 'meubelreiniging') {
-      return hoeveelheid * PRIJZEN.meubelreiniging.perZitplaats;
-    }
-    if (dienst === 'tapijtreiniging') {
-      return hoeveelheid * PRIJZEN.tapijtreiniging.perM2;
-    }
+    if (dienst === 'meubelreiniging') return hoeveelheid * PRIJZEN.meubelreiniging.perZitplaats;
+    if (dienst === 'tapijtreiniging') return hoeveelheid * PRIJZEN.tapijtreiniging.perM2;
     if (dienst === 'impregneren_meubels') {
       const zit = hoeveelheid;
       if (zit <= 4) return zit * PRIJZEN.impregneren_meubels.perZitplaatsTot4;
@@ -79,31 +68,20 @@ document.addEventListener('DOMContentLoaded', () => {
         ? 0
         : hoeveelheid * PRIJZEN.impregneren_tapijt.perM2;
     }
-    if (dienst === 'auto_interieur') {
-      return PRIJZEN.auto_interieur.vast;
-    }
+    if (dienst === 'auto_interieur') return PRIJZEN.auto_interieur.vast;
     return 0;
   }
 
   function updateFields() {
     const dienst = dienstSelect.value;
 
-    // Reset zichtbaarheid
     if (zitField) zitField.classList.remove('is-active');
     if (m2Field) m2Field.classList.remove('is-active');
 
-    if (!dienst) {
-      hideResult();
-      return;
-    }
+    if (!dienst) { hideResult(); return; }
 
-    // Vaste prijs (auto-interieur): geen invoer nodig, direct rekenen
-    if (VASTE_PRIJS_DIENSTEN.includes(dienst)) {
-      bereken();
-      return;
-    }
+    if (VASTE_PRIJS_DIENSTEN.includes(dienst)) { bereken(); return; }
 
-    // Zitplaatsen of m² tonen
     if (ZITPLAATSEN_DIENSTEN.includes(dienst)) {
       if (zitField) zitField.classList.add('is-active');
     } else if (M2_DIENSTEN.includes(dienst)) {
@@ -115,27 +93,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function bereken() {
     const dienst = dienstSelect.value;
-    if (!dienst) {
-      hideResult();
-      return;
-    }
+    if (!dienst) { hideResult(); return; }
 
     let hoeveelheid = 0;
 
     if (VASTE_PRIJS_DIENSTEN.includes(dienst)) {
-      hoeveelheid = 1; // dummy, niet gebruikt
+      hoeveelheid = 1;
     } else if (ZITPLAATSEN_DIENSTEN.includes(dienst)) {
       hoeveelheid = parseInt(zitSelect?.value) || 0;
-      if (!hoeveelheid) {
-        hideResult();
-        return;
-      }
+      if (!hoeveelheid) { hideResult(); return; }
     } else if (M2_DIENSTEN.includes(dienst)) {
       hoeveelheid = parseFloat(m2Input?.value) || 0;
-      if (hoeveelheid <= 0) {
-        hideResult();
-        return;
-      }
+      if (hoeveelheid <= 0) { hideResult(); return; }
     }
 
     const dienstprijs = berekenDienstprijs(dienst, hoeveelheid);
@@ -152,8 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dienstPrijsEl) dienstPrijsEl.textContent = formatPrijs(dienstprijs);
     if (totaalEl) totaalEl.textContent = formatPrijs(totaal);
 
-    // Verberg voorrijkosten-regel als 0
-    const voorrijRegel = document.querySelector('.calculator_result_voorrijkosten');
+    const voorrijRegel = container.querySelector('.calculator_result_voorrijkosten');
     if (voorrijRegel) {
       voorrijRegel.style.display = voorrij > 0 ? '' : 'none';
     }
@@ -163,7 +131,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (resultWrap) resultWrap.classList.remove('is-active');
   }
 
-  // Event listeners — live update zonder submit
   dienstSelect.addEventListener('change', updateFields);
   if (zitSelect) zitSelect.addEventListener('change', bereken);
   if (m2Input) {
@@ -171,6 +138,5 @@ document.addEventListener('DOMContentLoaded', () => {
     m2Input.addEventListener('change', bereken);
   }
 
-  // Init
   updateFields();
-});
+}
