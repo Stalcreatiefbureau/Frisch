@@ -1,5 +1,9 @@
-function initDraggableMarquee() {
-  const wrappers = document.querySelectorAll("[data-draggable-marquee-init]");
+// ============================================
+// FRISCH DRAGGABLE MARQUEE (Barba-compatible)
+// ============================================
+
+function initDraggableMarquee(container = document) {
+  const wrappers = container.querySelectorAll("[data-draggable-marquee-init]");
 
   const getNumberAttr = (el, name, fallback) => {
     const value = parseFloat(el.getAttribute(name));
@@ -16,12 +20,11 @@ function initDraggableMarquee() {
     const duration = getNumberAttr(wrapper, "data-duration", 20);
     const multiplier = getNumberAttr(wrapper, "data-multiplier", 40);
     const sensitivity = getNumberAttr(wrapper, "data-sensitivity", 0.01);
-
     const wrapperWidth = wrapper.getBoundingClientRect().width;
     const listWidth = list.scrollWidth || list.getBoundingClientRect().width;
     if (!wrapperWidth || !listWidth) return;
 
-    // Make enough duplicates to cover screen
+    // Genereer genoeg duplicates om gaps te voorkomen
     const minRequiredWidth = wrapperWidth * 2 + listWidth;
     while (collection.scrollWidth < minRequiredWidth) {
       const listClone = list.cloneNode(true);
@@ -31,9 +34,9 @@ function initDraggableMarquee() {
     }
 
     const wrapX = gsap.utils.wrap(-listWidth, 0);
-    
+
     gsap.set(collection, { x: 0 });
-    
+
     const marqueeLoop = gsap.to(collection, {
       x: -listWidth,
       duration,
@@ -44,26 +47,26 @@ function initDraggableMarquee() {
         x: (x) => wrapX(parseFloat(x)) + "px"
       },
     });
-    
-    // Direction can be used for css + set initial direction on load
+
+    // Bewaar voor cleanup
+    wrapper._marqueeLoop = marqueeLoop;
+
     const initialDirectionAttr = (wrapper.getAttribute("data-direction") || "left").toLowerCase();
     const baseDirection = initialDirectionAttr === "right" ? -1 : 1;
-    
     const timeScale = { value: 1 };
-    
+
     timeScale.value = baseDirection;
     wrapper.setAttribute("data-direction", baseDirection < 0 ? "right" : "left");
-    
+
     if (baseDirection < 0) marqueeLoop.progress(1);
-    
+
     function applyTimeScale() {
       marqueeLoop.timeScale(timeScale.value);
       wrapper.setAttribute("data-direction", timeScale.value < 0 ? "right" : "left");
     }
-    
+
     applyTimeScale();
 
-    // Drag observer
     const marqueeObserver = Observer.create({
       target: wrapper,
       type: "pointer,touch",
@@ -72,18 +75,16 @@ function initDraggableMarquee() {
       onChangeX: (observerEvent) => {
         let velocityTimeScale = observerEvent.velocityX * -sensitivity;
         velocityTimeScale = gsap.utils.clamp(-multiplier, multiplier, velocityTimeScale);
-
         gsap.killTweensOf(timeScale);
-
         const restingDirection = velocityTimeScale < 0 ? -1 : 1;
-
         gsap.timeline({ onUpdate: applyTimeScale })
           .to(timeScale, { value: velocityTimeScale, duration: 0.1, overwrite: true })
           .to(timeScale, { value: restingDirection, duration: 1.0 });
       }
     });
 
-    // Pause marquee when scrolled out of view
+    wrapper._marqueeObserver = marqueeObserver;
+
     ScrollTrigger.create({
       trigger: wrapper,
       start: "top bottom",
@@ -93,16 +94,7 @@ function initDraggableMarquee() {
       onLeave: () => { marqueeLoop.pause(); marqueeObserver.disable(); },
       onLeaveBack: () => { marqueeLoop.pause(); marqueeObserver.disable(); }
     });
-    
+
     wrapper.setAttribute("data-draggable-marquee-init", "initialized");
   });
 }
-
-// Initialize Draggable Marquee (Directional)
-window.addEventListener("load", () => {
-  // Extra delay voor zekerheid bij Webflow
-  setTimeout(() => {
-    initDraggableMarquee();
-    ScrollTrigger.refresh();
-  }, 100);
-});
