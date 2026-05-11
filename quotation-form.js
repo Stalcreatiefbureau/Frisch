@@ -1,5 +1,5 @@
 // ============================================
-// FRISCH QUOTATION FORM
+// FRISCH QUOTATION FORM (Barba-compatible)
 // Multi-step form met prijsberekening + kortingscode + validatie
 // ============================================
 //
@@ -13,18 +13,9 @@
 // - Impregneren tapijt: €2/m², GRATIS vanaf 12 m²
 // - Auto-interieur: €150 vast
 //
-// Impregneren logica:
-// - Bij meubelreiniging + impregneren → impregneren meubels
-// - Bij tapijtreiniging + impregneren → impregneren tapijt
-// - Bij ALLEEN impregneren (geen reiniging) → klant kiest type via stap 2 select
-//   (meubels / tapijt / beide)
-//
 // ============================================
 
-document.addEventListener('DOMContentLoaded', () => {
-  // ============================================
-  // CONFIG
-  // ============================================
+function initQuotationForm(container = document) {
   const PRIJZEN = {
     voorrijkosten: 60,
     meubelreiniging: { perZitplaats: 20 },
@@ -37,12 +28,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const fadeDuration = 0.4;
   const slideDistance = 30;
 
-  const steps = document.querySelectorAll('[data-form-step]');
-  const tabs = document.querySelectorAll('[data-form-tab]');
-  const nextButtons = document.querySelectorAll('[data-form-action="next"]');
-  const prevButtons = document.querySelectorAll('[data-form-action="prev"]');
+  const steps = container.querySelectorAll('[data-form-step]');
+  const tabs = container.querySelectorAll('[data-form-tab]');
+  const nextButtons = container.querySelectorAll('[data-form-action="next"]');
+  const prevButtons = container.querySelectorAll('[data-form-action="prev"]');
 
   if (!steps.length) return;
+
+  // Anti-dubbel-init
+  const firstStep = steps[0];
+  if (firstStep.dataset.quotationFormInit === 'true') return;
+  firstStep.dataset.quotationFormInit = 'true';
 
   let currentStep = 1;
   let isAnimating = false;
@@ -58,18 +54,16 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     zitplaatsen: 1,
     m2_tapijt: 0,
-    impregneren_type: '', // 'meubels', 'tapijt', 'beide' — alleen relevant bij losstaand impregneren
+    impregneren_type: '',
     kortingscode: null
   };
 
   // ============================================
-  // HELPERS — bepaal welke impregneren actief is
+  // HELPERS
   // ============================================
   function impregneertMeubels() {
     if (!state.diensten.impregneren) return false;
-    // Als meubelreiniging is gekozen, impregneren we automatisch meubels
     if (state.diensten.meubelreiniging) return true;
-    // Als alleen impregneren (zonder enige reiniging), gebruik de keuze van de klant
     if (!state.diensten.tapijtreiniging) {
       return state.impregneren_type === 'meubels' || state.impregneren_type === 'beide';
     }
@@ -95,7 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // STEP NAVIGATION
   // ============================================
   function getStepElement(stepNumber) {
-    return document.querySelector(`[data-form-step="${stepNumber}"]`);
+    return container.querySelector(`[data-form-step="${stepNumber}"]`);
   }
 
   function showStep(newStep) {
@@ -119,9 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         newStepEl.classList.add('is-active');
 
-        if (newStep === 3) {
-          renderSummary();
-        }
+        if (newStep === 3) renderSummary();
 
         gsap.fromTo(newStepEl,
           { opacity: 0, x: newEnterX },
@@ -148,14 +140,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // STATE
   // ============================================
   function updateState() {
-    state.diensten.meubelreiniging = !!document.querySelector('[name="dienst_meubelreiniging"]:checked');
-    state.diensten.tapijtreiniging = !!document.querySelector('[name="dienst_tapijtreiniging"]:checked');
-    state.diensten.impregneren = !!document.querySelector('[name="dienst_impregneren"]:checked');
-    state.diensten.auto_interieur = !!document.querySelector('[name="dienst_auto_interieur"]:checked');
+    state.diensten.meubelreiniging = !!container.querySelector('[name="dienst_meubelreiniging"]:checked');
+    state.diensten.tapijtreiniging = !!container.querySelector('[name="dienst_tapijtreiniging"]:checked');
+    state.diensten.impregneren = !!container.querySelector('[name="dienst_impregneren"]:checked');
+    state.diensten.auto_interieur = !!container.querySelector('[name="dienst_auto_interieur"]:checked');
 
-    const zitInput = document.querySelector('[name="zitplaatsen"]');
-    const m2Input = document.querySelector('[name="m2_tapijt"]');
-    const impTypeInput = document.querySelector('[name="impregneren_type"]');
+    const zitInput = container.querySelector('[name="zitplaatsen"]');
+    const m2Input = container.querySelector('[name="m2_tapijt"]');
+    const impTypeInput = container.querySelector('[name="impregneren_type"]');
 
     if (zitInput) state.zitplaatsen = parseInt(zitInput.value) || 1;
     if (m2Input) state.m2_tapijt = parseFloat(m2Input.value) || 0;
@@ -163,18 +155,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateConditionalFields() {
-    const zitField = document.querySelector('[data-field="zitplaatsen"]');
-    const m2Field = document.querySelector('[data-field="m2_tapijt"]');
-    const impTypeField = document.querySelector('[data-field="impregneren_type"]');
+    const zitField = container.querySelector('[data-field="zitplaatsen"]');
+    const m2Field = container.querySelector('[data-field="m2_tapijt"]');
+    const impTypeField = container.querySelector('[data-field="impregneren_type"]');
 
-    // Type-keuze verschijnt alleen bij losstaand impregneren
     const showImpType = isLosstaandImpregneren();
 
-    // Zitplaatsen: bij meubelreiniging, OF bij losstaand impregneren met type "meubels" of "beide"
     const showZit = state.diensten.meubelreiniging ||
                     (showImpType && (state.impregneren_type === 'meubels' || state.impregneren_type === 'beide'));
 
-    // M²: bij tapijtreiniging, OF bij losstaand impregneren met type "tapijt" of "beide"
     const showM2 = state.diensten.tapijtreiniging ||
                    (showImpType && (state.impregneren_type === 'tapijt' || state.impregneren_type === 'beide'));
 
@@ -187,13 +176,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // VALIDATIE
   // ============================================
   function showError(fieldName, inputElement) {
-    const errorEl = document.querySelector(`[data-error-for="${fieldName}"]`);
+    const errorEl = container.querySelector(`[data-error-for="${fieldName}"]`);
     if (errorEl) errorEl.classList.add('is-active');
     if (inputElement) inputElement.classList.add('is-error');
   }
 
   function clearError(fieldName, inputElement) {
-    const errorEl = document.querySelector(`[data-error-for="${fieldName}"]`);
+    const errorEl = container.querySelector(`[data-error-for="${fieldName}"]`);
     if (errorEl) errorEl.classList.remove('is-active');
     if (inputElement) inputElement.classList.remove('is-error');
   }
@@ -222,21 +211,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (!heeftDienst) {
         showError('diensten');
-        const wrap = document.querySelector('.form_diensten_wrap');
+        const wrap = container.querySelector('.form_diensten_wrap');
         if (wrap) wrap.classList.add('is-error');
         isValid = false;
       } else {
         clearError('diensten');
-        const wrap = document.querySelector('.form_diensten_wrap');
+        const wrap = container.querySelector('.form_diensten_wrap');
         if (wrap) wrap.classList.remove('is-error');
       }
     }
 
     if (stepNumber === 2) {
-      // Impregneren type — verplicht bij losstaand impregneren
-      const impTypeField = document.querySelector('[data-field="impregneren_type"]');
+      const impTypeField = container.querySelector('[data-field="impregneren_type"]');
       if (impTypeField && impTypeField.style.display !== 'none') {
-        const impTypeInput = document.querySelector('[name="impregneren_type"]');
+        const impTypeInput = container.querySelector('[name="impregneren_type"]');
         if (!impTypeInput.value) {
           showError('impregneren_type', impTypeInput);
           isValid = false;
@@ -245,10 +233,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // Zitplaatsen
-      const zitField = document.querySelector('[data-field="zitplaatsen"]');
+      const zitField = container.querySelector('[data-field="zitplaatsen"]');
       if (zitField && zitField.style.display !== 'none') {
-        const zitInput = document.querySelector('[name="zitplaatsen"]');
+        const zitInput = container.querySelector('[name="zitplaatsen"]');
         if (!zitInput.value) {
           showError('zitplaatsen', zitInput);
           isValid = false;
@@ -257,10 +244,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // m2
-      const m2Field = document.querySelector('[data-field="m2_tapijt"]');
+      const m2Field = container.querySelector('[data-field="m2_tapijt"]');
       if (m2Field && m2Field.style.display !== 'none') {
-        const m2Input = document.querySelector('[name="m2_tapijt"]');
+        const m2Input = container.querySelector('[name="m2_tapijt"]');
         const m2Value = parseFloat(m2Input.value);
         if (!m2Input.value || isNaN(m2Value) || m2Value <= 0) {
           showError('m2_tapijt', m2Input);
@@ -270,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      const dagInput = document.querySelector('[name="voorkeur_dag"]');
+      const dagInput = container.querySelector('[name="voorkeur_dag"]');
       if (dagInput && !dagInput.value) {
         showError('voorkeur_dag', dagInput);
         isValid = false;
@@ -291,11 +277,11 @@ document.addEventListener('DOMContentLoaded', () => {
         { name: 'land', minLength: 1 }
       ];
 
-      const landInput = document.querySelector('[name="land"]');
+      const landInput = container.querySelector('[name="land"]');
       const landValue = landInput ? landInput.value : '';
 
       verplicht.forEach(veld => {
-        const input = document.querySelector(`[name="${veld.name}"]`);
+        const input = container.querySelector(`[name="${veld.name}"]`);
         if (!input) return;
 
         const value = input.value.trim();
@@ -324,7 +310,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function setupLiveValidation() {
-    document.addEventListener('input', (e) => {
+    // Scoped naar container i.p.v. document
+    container.addEventListener('input', (e) => {
       if (!validationActive[currentStep]) return;
       const target = e.target;
       const name = target.name;
@@ -332,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
       revalidateField(name, target);
     });
 
-    document.addEventListener('change', (e) => {
+    container.addEventListener('change', (e) => {
       if (!validationActive[currentStep]) return;
 
       if (e.target.matches('[name^="dienst_"]')) {
@@ -349,7 +336,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function revalidateField(name, input) {
     const value = input.value.trim();
-    const landInput = document.querySelector('[name="land"]');
+    const landInput = container.querySelector('[name="land"]');
     const landValue = landInput ? landInput.value : '';
 
     let valid = true;
@@ -384,7 +371,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function berekenPrijzen() {
     const lijst = [];
 
-    // Voorrijkosten bij elke dienst behalve alleen auto-interieur
     const heeftHoofddienst = state.diensten.meubelreiniging ||
                               state.diensten.tapijtreiniging ||
                               state.diensten.impregneren;
@@ -417,7 +403,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Impregneren meubels — actief bij meubelreiniging, of bij losstaand impregneren met type meubels/beide
     if (impregneertMeubels()) {
       const zit = state.zitplaatsen;
       let prijs = 0;
@@ -434,7 +419,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Impregneren tapijt — actief bij tapijtreiniging, of bij losstaand impregneren met type tapijt/beide
     if (impregneertTapijt()) {
       const m2 = state.m2_tapijt;
       const prijs = m2 >= PRIJZEN.impregneren_tapijt.gratisVanafM2
@@ -469,9 +453,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function renderSummary() {
     updateState();
-    const cardsContainer = document.querySelector('[data-summary="cards"]');
-    const totalEl = document.querySelector('[data-summary="total"]');
-    const template = document.querySelector('.summary_card.is-template');
+    const cardsContainer = container.querySelector('[data-summary="cards"]');
+    const totalEl = container.querySelector('[data-summary="total"]');
+    const template = container.querySelector('.summary_card.is-template');
 
     if (!cardsContainer || !template || !totalEl) return;
 
@@ -507,7 +491,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // KORTINGSCODE
   // ============================================
   function getKortingscodes() {
-    const items = document.querySelectorAll('[data-discount-code]');
+    const items = container.querySelectorAll('[data-discount-code]');
     return Array.from(items).map(item => ({
       code: item.querySelector('[data-discount-field="code"]')?.textContent.trim().toUpperCase() || '',
       type: item.querySelector('[data-discount-field="type"]')?.textContent.trim() || 'Percentage',
@@ -516,8 +500,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function applyDiscount() {
-    const input = document.querySelector('[name="kortingscode"]');
-    const messageEl = document.querySelector('[data-summary="discount-message"]');
+    const input = container.querySelector('[name="kortingscode"]');
+    const messageEl = container.querySelector('[data-summary="discount-message"]');
     if (!input || !messageEl) return;
 
     const ingevoerd = input.value.trim().toUpperCase();
@@ -551,7 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ============================================
   // EVENT LISTENERS
   // ============================================
-  document.addEventListener('change', (e) => {
+  container.addEventListener('change', (e) => {
     if (e.target.matches('[name^="dienst_"]') ||
         e.target.matches('[name="zitplaatsen"]') ||
         e.target.matches('[name="m2_tapijt"]') ||
@@ -561,7 +545,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  document.addEventListener('input', (e) => {
+  container.addEventListener('input', (e) => {
     if (e.target.matches('[name="m2_tapijt"]')) {
       updateState();
     }
@@ -590,7 +574,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  const discountBtn = document.querySelector('[data-form-action="apply-discount"]');
+  const discountBtn = container.querySelector('[data-form-action="apply-discount"]');
   if (discountBtn) {
     discountBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -598,7 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const form = document.querySelector('form');
+  const form = container.querySelector('form');
   const submitBtn = form?.querySelector('input[type="submit"], button[type="submit"]');
 
   if (submitBtn) {
@@ -637,4 +621,4 @@ document.addEventListener('DOMContentLoaded', () => {
   updateState();
   updateConditionalFields();
   setupLiveValidation();
-});
+}
