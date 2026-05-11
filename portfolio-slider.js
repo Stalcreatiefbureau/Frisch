@@ -1,6 +1,15 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const wrap = document.querySelector('.slider_wrap');
+// ============================================
+// FRISCH PORTFOLIO SLIDER (Barba-compatible)
+// Draggable centered slider met clones + autoplay
+// ============================================
+
+function initPortfolioSlider(container = document) {
+  const wrap = container.querySelector('.slider_wrap');
   if (!wrap) return;
+
+  // Anti-dubbel-init
+  if (wrap.dataset.sliderInit === 'true') return;
+  wrap.dataset.sliderInit = 'true';
 
   const track = wrap.querySelector('.slider_track');
   const originalSlides = gsap.utils.toArray('.slider_slide', track);
@@ -49,37 +58,32 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateSlidesByPosition() {
-  const wrapCenter = wrap.offsetWidth / 2;
-  const trackX = gsap.getProperty(track, 'x');
+    const wrapCenter = wrap.offsetWidth / 2;
+    const trackX = gsap.getProperty(track, 'x');
 
-  allSlides.forEach((slide) => {
-    const slideCenter = slide.offsetLeft + slide.offsetWidth / 2 + trackX;
-    const distance = Math.abs(slideCenter - wrapCenter);
-    const maxDistance = slide.offsetWidth;
+    allSlides.forEach((slide) => {
+      const slideCenter = slide.offsetLeft + slide.offsetWidth / 2 + trackX;
+      const distance = Math.abs(slideCenter - wrapCenter);
+      const maxDistance = slide.offsetWidth;
 
-    const adjustedDistance = Math.max(0, distance - 2);
-    const progress = Math.min(adjustedDistance / maxDistance, 1);
+      const adjustedDistance = Math.max(0, distance - 2);
+      const progress = Math.min(adjustedDistance / maxDistance, 1);
 
-    const scale = 1 - (0.15 * progress);
-    const opacity = 1 - (0.6 * progress);
+      const scale = 1 - (0.15 * progress);
+      const opacity = 1 - (0.6 * progress);
+      const zIndex = Math.round(100 - distance);
 
-    // Hoe dichter bij midden, hoe hoger de z-index
-    const zIndex = Math.round(100 - distance);
-
-    gsap.set(slide, { scale, opacity, zIndex });
-  });
-}
+      gsap.set(slide, { scale, opacity, zIndex });
+    });
+  }
 
   function normalizeIndex() {
     const realStart = cloneCount;
     const realEnd = cloneCount + totalOriginals;
 
     let shift = 0;
-    if (currentIndex >= realEnd) {
-      shift = -totalOriginals;
-    } else if (currentIndex < realStart) {
-      shift = totalOriginals;
-    }
+    if (currentIndex >= realEnd) shift = -totalOriginals;
+    else if (currentIndex < realStart) shift = totalOriginals;
 
     if (shift !== 0) {
       gsap.killTweensOf(track);
@@ -107,9 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
       onUpdate: updateSlidesByPosition,
       onComplete: () => {
         isAnimating = false;
-        requestAnimationFrame(() => {
-          normalizeIndex();
-        });
+        requestAnimationFrame(() => { normalizeIndex(); });
       }
     });
   }
@@ -138,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function startAutoplay() {
     clearInterval(autoplayTimer);
     autoplayTimer = setInterval(nextSlide, autoplayDelay);
+    wrap._sliderAutoplay = autoplayTimer;
   }
 
   function stopAutoplay() {
@@ -145,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // === DRAG ===
-  Draggable.create(track, {
+  const draggables = Draggable.create(track, {
     type: 'x',
     inertia: true,
     cursor: 'grab',
@@ -187,22 +190,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Bewaar voor cleanup bij page leave
+  track._draggable = draggables;
+
   // === HOVER PAUSE ===
   wrap.addEventListener('mouseenter', stopAutoplay);
   wrap.addEventListener('mouseleave', startAutoplay);
 
   // === RESIZE ===
   let resizeTimer;
-  window.addEventListener('resize', () => {
+  const resizeHandler = () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
       gsap.set(track, { x: getOffset(currentIndex) });
       updateSlidesByPosition();
     }, 150);
-  });
+  };
+  window.addEventListener('resize', resizeHandler);
+  wrap._resizeHandler = resizeHandler;
 
   // === INIT ===
   gsap.set(track, { x: getOffset(currentIndex) });
   updateSlidesByPosition();
   startAutoplay();
-});
+}
