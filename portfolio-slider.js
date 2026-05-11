@@ -1,0 +1,208 @@
+document.addEventListener('DOMContentLoaded', () => {
+  const wrap = document.querySelector('.slider_wrap');
+  if (!wrap) return;
+
+  const track = wrap.querySelector('.slider_track');
+  const originalSlides = gsap.utils.toArray('.slider_slide', track);
+
+  gsap.registerPlugin(Draggable, InertiaPlugin);
+
+  // === CLONE SETUP ===
+  const cloneSets = 2;
+  const totalOriginals = originalSlides.length;
+
+  for (let i = 0; i < cloneSets; i++) {
+    originalSlides.forEach(slide => {
+      const cloneBefore = slide.cloneNode(true);
+      const cloneAfter = slide.cloneNode(true);
+      cloneBefore.classList.add('is-clone');
+      cloneAfter.classList.add('is-clone');
+      track.insertBefore(cloneBefore, track.firstChild);
+      track.appendChild(cloneAfter);
+    });
+  }
+
+  const allSlides = gsap.utils.toArray('.slider_slide', track);
+  const cloneCount = cloneSets * totalOriginals;
+
+  let currentIndex = cloneCount;
+  let autoplayTimer;
+  let isAnimating = false;
+  const autoplayDelay = 4000;
+  const transitionDuration = 0.9;
+
+  // === HELPERS ===
+  function getOffset(index) {
+    const slide = allSlides[index];
+    const wrapWidth = wrap.offsetWidth;
+    const slideWidth = slide.offsetWidth;
+    const slideLeft = slide.offsetLeft;
+    return -(slideLeft - (wrapWidth - slideWidth) / 2);
+  }
+
+  function getSnapPositions() {
+    return allSlides.map((slide) => {
+      const wrapWidth = wrap.offsetWidth;
+      const slideWidth = slide.offsetWidth;
+      return -(slide.offsetLeft - (wrapWidth - slideWidth) / 2);
+    });
+  }
+
+  function updateSlidesByPosition() {
+  const wrapCenter = wrap.offsetWidth / 2;
+  const trackX = gsap.getProperty(track, 'x');
+
+  allSlides.forEach((slide) => {
+    const slideCenter = slide.offsetLeft + slide.offsetWidth / 2 + trackX;
+    const distance = Math.abs(slideCenter - wrapCenter);
+    const maxDistance = slide.offsetWidth;
+
+    const adjustedDistance = Math.max(0, distance - 2);
+    const progress = Math.min(adjustedDistance / maxDistance, 1);
+
+    const scale = 1 - (0.15 * progress);
+    const opacity = 1 - (0.6 * progress);
+
+    // Hoe dichter bij midden, hoe hoger de z-index
+    const zIndex = Math.round(100 - distance);
+
+    gsap.set(slide, { scale, opacity, zIndex });
+  });
+}
+
+  function normalizeIndex() {
+    const realStart = cloneCount;
+    const realEnd = cloneCount + totalOriginals;
+
+    let shift = 0;
+    if (currentIndex >= realEnd) {
+      shift = -totalOriginals;
+    } else if (currentIndex < realStart) {
+      shift = totalOriginals;
+    }
+
+    if (shift !== 0) {
+      gsap.killTweensOf(track);
+
+      const oldOffset = getOffset(currentIndex);
+      currentIndex += shift;
+      const newOffset = getOffset(currentIndex);
+      const currentX = gsap.getProperty(track, 'x');
+      const correctedX = currentX + (newOffset - oldOffset);
+
+      gsap.set(track, { x: correctedX });
+      updateSlidesByPosition();
+    }
+  }
+
+  function goToSlide(index, duration = transitionDuration) {
+    if (isAnimating) return;
+    isAnimating = true;
+    currentIndex = index;
+
+    gsap.to(track, {
+      x: getOffset(index),
+      duration: duration,
+      ease: 'power3.inOut',
+      onUpdate: updateSlidesByPosition,
+      onComplete: () => {
+        isAnimating = false;
+        requestAnimationFrame(() => {
+          normalizeIndex();
+        });
+      }
+    });
+  }
+
+  function syncCurrentIndex() {
+    const wrapCenter = wrap.offsetWidth / 2;
+    const trackX = gsap.getProperty(track, 'x');
+
+    let closestIndex = currentIndex;
+    let closestDistance = Infinity;
+
+    allSlides.forEach((slide, i) => {
+      const slideCenter = slide.offsetLeft + slide.offsetWidth / 2 + trackX;
+      const distance = Math.abs(slideCenter - wrapCenter);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = i;
+      }
+    });
+
+    currentIndex = closestIndex;
+  }
+
+  function nextSlide() { goToSlide(currentIndex + 1); }
+
+  function startAutoplay() {
+    clearInterval(autoplayTimer);
+    autoplayTimer = setInterval(nextSlide, autoplayDelay);
+  }
+
+  function stopAutoplay() {
+    clearInterval(autoplayTimer);
+  }
+
+  // === DRAG ===
+  Draggable.create(track, {
+    type: 'x',
+    inertia: true,
+    cursor: 'grab',
+    activeCursor: 'grabbing',
+    dragResistance: 0.6,
+    snap: {
+      x: function(value) {
+        const positions = getSnapPositions();
+        return positions.reduce((prev, curr) =>
+          Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev
+        );
+      }
+    },
+    onPress: function() {
+      stopAutoplay();
+      track.classList.add('is-dragging');
+      gsap.killTweensOf(track);
+      isAnimating = false;
+    },
+    onDrag: updateSlidesByPosition,
+    onThrowUpdate: updateSlidesByPosition,
+    onThrowComplete: function() {
+      track.classList.remove('is-dragging');
+      syncCurrentIndex();
+      requestAnimationFrame(() => {
+        normalizeIndex();
+        startAutoplay();
+      });
+    },
+    onRelease: function() {
+      if (!this.tween || !this.tween.isActive()) {
+        track.classList.remove('is-dragging');
+        syncCurrentIndex();
+        requestAnimationFrame(() => {
+          normalizeIndex();
+          startAutoplay();
+        });
+      }
+    }
+  });
+
+  // === HOVER PAUSE ===
+  wrap.addEventListener('mouseenter', stopAutoplay);
+  wrap.addEventListener('mouseleave', startAutoplay);
+
+  // === RESIZE ===
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      gsap.set(track, { x: getOffset(currentIndex) });
+      updateSlidesByPosition();
+    }, 150);
+  });
+
+  // === INIT ===
+  gsap.set(track, { x: getOffset(currentIndex) });
+  updateSlidesByPosition();
+  startAutoplay();
+});
