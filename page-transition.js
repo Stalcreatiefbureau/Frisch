@@ -35,14 +35,10 @@ function initOnceFunctions() {
   initLenis();
   if (onceFunctionsInitialized) return;
   onceFunctionsInitialized = true;
-
-  // Dingen die maar één keer hoeven (buiten Barba container)
-  // bijv. globale navbar, footer modals, etc.
 }
 
 function initBeforeEnterFunctions(next) {
   nextPage = next || document;
-  // Runs before the enter animation — initial states zetten
 }
 
 function initAfterEnterFunctions(next) {
@@ -57,6 +53,7 @@ function initAfterEnterFunctions(next) {
   if (has('[data-calc="dienst"]')) initTarievenCalculator(nextPage);
   if (has('[data-form-step]')) initQuotationForm(nextPage);
   if (has('[data-modal-open]') || has('[data-modal-parent]')) setupModals(nextPage);
+  if (has('[data-vimeo-bg-init]')) initVimeoBGVideo(nextPage);
 
   // Refreshes als laatste
   if (hasLenis) lenis.resize();
@@ -156,7 +153,6 @@ barba.hooks.afterLeave((data) => {
   if (hasScrollTrigger) {
     ScrollTrigger.getAll().forEach(trigger => trigger.kill());
   }
-  // Kill animaties op de oude container
   killPageAnimations(data.current.container);
 });
 
@@ -187,7 +183,7 @@ barba.init({
 
       async once(data) {
         initOnceFunctions();
-        initAfterEnterFunctions(data.next.container);  // ← cruciaal voor eerste pagina
+        initAfterEnterFunctions(data.next.container);
         return runPageOnceAnimation(data.next.container);
       },
 
@@ -231,9 +227,15 @@ function killPageAnimations(container) {
     sliderTrack._draggable.forEach(d => d.kill());
     sliderTrack._draggable = null;
   }
-  if (container._sliderAutoplay) {
-    clearInterval(container._sliderAutoplay);
-    container._sliderAutoplay = null;
+  const sliderWrap = container.querySelector('.slider_wrap');
+  if (sliderWrap && sliderWrap._sliderAutoplay) {
+    clearInterval(sliderWrap._sliderAutoplay);
+    sliderWrap._sliderAutoplay = null;
+  }
+
+  // Kill Vimeo bg players
+  if (typeof killVimeoBGVideo === 'function') {
+    killVimeoBGVideo(container);
   }
 }
 
