@@ -76,11 +76,13 @@ function runPageOnceAnimation(next) {
 
   // Stagger reveal op first page load voor [data-load-stagger] wrappers
   const loadStaggerWraps = next.querySelectorAll('[data-load-stagger]');
+  const allItems = [];
   loadStaggerWraps.forEach((wrap) => {
-    const items = wrap.children;
-    if (!items.length) return;
-
-    tl.fromTo(items, {
+    allItems.push(...wrap.children);
+  });
+  
+  if (allItems.length) {
+    tl.fromTo(allItems, {
       y: 30,
       autoAlpha: 0,
     }, {
@@ -88,9 +90,9 @@ function runPageOnceAnimation(next) {
       autoAlpha: 1,
       ease: "power4.out",
       duration: 0.5,
-      stagger: 0.02,
+      stagger: 0.06,
     }, 0);
-  });
+  }
 
   return tl;
 }
@@ -138,13 +140,15 @@ function runPageEnterAnimation(next) {
     ease: "Power1.easeInOut",
   }, "startEnter");
 
-  // Stagger reveal voor wrappers met [data-load-stagger]
+  // Verzamel alle items van alle [data-load-stagger] wrappers
   const loadStaggerWraps = next.querySelectorAll('[data-load-stagger]');
+  const allItems = [];
   loadStaggerWraps.forEach((wrap) => {
-    const items = wrap.children;
-    if (!items.length) return;
-
-    tl.fromTo(items, {
+    allItems.push(...wrap.children);
+  });
+  
+  if (allItems.length) {
+    tl.fromTo(allItems, {
       y: 30,
       autoAlpha: 0,
     }, {
@@ -154,7 +158,7 @@ function runPageEnterAnimation(next) {
       duration: 0.5,
       stagger: 0.06,
     }, "< 0.75");
-  });
+  }
 
   tl.add("pageReady");
   tl.call(resetPage, [next], "pageReady");
