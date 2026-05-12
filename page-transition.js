@@ -1,4 +1,4 @@
-/ -----------------------------------------
+// ------------------------------------------
 // FRISCH PAGE TRANSITIONS (Osmo + Barba)
 // Centrale orchestrator — roept alle init-functies aan via Barba hooks
 // -----------------------------------------
