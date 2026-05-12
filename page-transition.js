@@ -118,13 +118,16 @@ function runPageEnterAnimation(next) {
     ease: "Power1.easeInOut",
   }, "startEnter");
 
-  const h1 = next.querySelector('h1');
-  if (h1) {
-    tl.fromTo(h1, {
-      yPercent: 25, autoAlpha: 0,
+  const contentWrap = next.querySelector('.content_wrap');
+  if (contentWrap) {
+    const items = contentWrap.children;
+    tl.fromTo(items, {
+      y: 30, autoAlpha: 0,
     }, {
-      yPercent: 0, autoAlpha: 1,
-      ease: "expo.out", duration: 1,
+      y: 0, autoAlpha: 1,
+      ease: "expo.out",
+      duration: 1,
+      stagger: 0.1,
     }, "< 0.75");
   }
 
