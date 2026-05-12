@@ -2,7 +2,6 @@
 // FRISCH STAGGER REVEAL (Barba-compatible)
 // ============================================
 // Generic stagger fade-in animatie voor elementen die in beeld scrollen.
-// Respecteert bestaande translateY van items (bv. CSS offsets).
 //
 // USAGE:
 //   <div data-stagger>
@@ -63,31 +62,15 @@ function initStaggerReveal(container = document) {
     const startPos = wrapper.getAttribute('data-stagger-start') || 'top 70%';
     const from = wrapper.getAttribute('data-stagger-from') || 'start';
 
-    // Voor elk item: lees bestaande translateY en bewaar in dataset
-    items.forEach(item => {
-      const transform = getComputedStyle(item).transform;
-      let existingY = 0;
-
-      if (transform && transform !== 'none') {
-        const match = transform.match(/matrix\(([^)]+)\)/);
-        if (match) {
-          const values = match[1].split(',').map(v => parseFloat(v.trim()));
-          existingY = values[5] || 0;
-        }
-      }
-
-      item.dataset.existingY = existingY;
-    });
-
-    // Animatie: start vanaf existingY + offset, eindig op existingY
+    // Animatie: items komen van yOffset naar 0
     const tween = gsap.fromTo(items,
       {
         opacity: 0,
-        y: (i, target) => parseFloat(target.dataset.existingY) + yOffset
+        y: yOffset
       },
       {
         opacity: 1,
-        y: (i, target) => parseFloat(target.dataset.existingY),
+        y: 0,
         duration: duration,
         ease: ease,
         stagger: {
