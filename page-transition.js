@@ -131,8 +131,8 @@ function runPageEnterAnimation(next) {
       y: 0,
       autoAlpha: 1,
       ease: "expo.out",
-      duration: 1,
-      stagger: 0.1,
+      duration: 0.6,
+      stagger: 0.06,
     }, "< 0.75");
   });
 
