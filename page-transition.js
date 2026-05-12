@@ -88,7 +88,7 @@ function runPageOnceAnimation(next) {
       autoAlpha: 1,
       ease: "power4.out",
       duration: 0.5,
-      stagger: 0.06,
+      stagger: 0.02,
     }, 0);
   });
 
