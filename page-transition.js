@@ -54,6 +54,8 @@ function initAfterEnterFunctions(next) {
   if (has('[data-form-step]')) initQuotationForm(nextPage);
   if (has('[data-modal-open]') || has('[data-modal-parent]')) setupModals(nextPage);
   if (has('[data-vimeo-bg-init]')) initVimeoBGVideo(nextPage);
+  if (has('[data-draw-scroll-wrap]')) initDrawPathOnScroll(nextPage);
+  if (has('.timeline_wrap')) initTimelineCards(nextPage);
 
   // Refreshes als laatste
   if (hasLenis) lenis.resize();
@@ -145,6 +147,9 @@ barba.hooks.beforeEnter(data => {
     lenis.stop();
   }
 
+  // Sluit alle open Webflow nav-dropdowns en mobiele menu
+  closeAllNavDropdowns();
+
   initBeforeEnterFunctions(data.next.container);
   applyThemeFrom(data.next.container);
 });
@@ -233,10 +238,56 @@ function killPageAnimations(container) {
     sliderWrap._sliderAutoplay = null;
   }
 
+  // Kill draw path on scroll
+  if (typeof killDrawPathOnScroll === 'function') killDrawPathOnScroll(container);
+
+  // Kill timeline cards
+  if (typeof killTimelineCards === 'function') killTimelineCards(container);
+
   // Kill Vimeo bg players
-  if (typeof killVimeoBGVideo === 'function') {
-    killVimeoBGVideo(container);
-  }
+  if (typeof killVimeoBGVideo === 'function') killVimeoBGVideo(container);
+}
+
+// -----------------------------------------
+// NAV CLEANUP — sluit dropdowns + mobile menu
+// -----------------------------------------
+
+function closeAllNavDropdowns() {
+  // Webflow dropdowns (hover + click)
+  document.querySelectorAll('.w-dropdown.w--open').forEach(dropdown => {
+    dropdown.classList.remove('w--open');
+    const toggle = dropdown.querySelector('.w-dropdown-toggle');
+    const list = dropdown.querySelector('.w-dropdown-list');
+    if (toggle) {
+      toggle.classList.remove('w--open');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+    if (list) list.classList.remove('w--open');
+  });
+
+  // Standalone toggle/list elementen die nog open staan
+  document.querySelectorAll('.w-dropdown-toggle.w--open').forEach(toggle => {
+    toggle.classList.remove('w--open');
+    toggle.setAttribute('aria-expanded', 'false');
+  });
+  document.querySelectorAll('.w-dropdown-list.w--open').forEach(list => {
+    list.classList.remove('w--open');
+  });
+
+  // Mobile hamburger menu
+  document.querySelectorAll('.w-nav-button.w--open').forEach(btn => {
+    btn.classList.remove('w--open');
+    btn.setAttribute('aria-expanded', 'false');
+  });
+  document.querySelectorAll('.w-nav-overlay').forEach(overlay => {
+    overlay.style.display = 'none';
+  });
+  document.querySelectorAll('.w-nav-menu.w--open').forEach(menu => {
+    menu.classList.remove('w--open');
+  });
+
+  // Body class die Webflow soms zet voor mobile menu
+  document.body.classList.remove('w--nav-menu-open');
 }
 
 // -----------------------------------------
