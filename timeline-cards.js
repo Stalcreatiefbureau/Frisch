@@ -1,9 +1,6 @@
 // ============================================
 // FRISCH TIMELINE CARDS — scroll-based rotation (Barba-compatible)
-// ============================================
-// Cards in de werkwijze sectie roteren tijdens scroll:
-// - Even index (links): rotatie +10° → -10°
-// - Oneven index (rechts): rotatie -10° → +10°
+// Alleen actief op tablet en groter (≥768px)
 // ============================================
 
 function initTimelineCards(container = document) {
@@ -12,41 +9,62 @@ function initTimelineCards(container = document) {
   const wraps = container.querySelectorAll('.timeline_wrap');
   if (!wraps.length) return;
 
-  wraps.forEach((wrap) => {
-    // Anti-dubbel-init
-    if (wrap.dataset.timelineCardsInit === 'true') return;
-    wrap.dataset.timelineCardsInit = 'true';
+  const mm = gsap.matchMedia();
 
-    const cards = wrap.querySelectorAll('.timeline_row .card_component');
-    if (!cards.length) return;
+  mm.add('(min-width: 768px)', () => {
+    wraps.forEach((wrap) => {
+      // Anti-dubbel-init
+      if (wrap.dataset.timelineCardsInit === 'true') return;
+      wrap.dataset.timelineCardsInit = 'true';
 
-    const cardTweens = [];
+      const cards = wrap.querySelectorAll('.timeline_row .card_component');
+      if (!cards.length) return;
 
-    cards.forEach((card, index) => {
-      const isLeft = index % 2 === 0;
-      const targetRotation = isLeft ? -10 : 10;
-      const startRotation = -targetRotation;
+      const cardTweens = [];
 
-      const tween = gsap.fromTo(card,
-        { rotation: startRotation },
-        {
-          rotation: targetRotation,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: card,
-            start: 'top bottom',
-            end: 'bottom top',
-            scrub: 1,
-            invalidateOnRefresh: true
+      cards.forEach((card, index) => {
+        const isLeft = index % 2 === 0;
+        const targetRotation = isLeft ? -10 : 10;
+        const startRotation = -targetRotation;
+
+        const tween = gsap.fromTo(card,
+          { rotation: startRotation },
+          {
+            rotation: targetRotation,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: card,
+              start: 'top bottom',
+              end: 'bottom top',
+              scrub: 1,
+              invalidateOnRefresh: true
+            }
           }
-        }
-      );
+        );
 
-      cardTweens.push(tween);
+        cardTweens.push(tween);
+      });
+
+      wrap._timelineCardTweens = cardTweens;
     });
 
-    // Bewaar voor cleanup
-    wrap._timelineCardTweens = cardTweens;
+    // Cleanup bij breakpoint change (bv. window resize naar mobile)
+    return () => {
+      wraps.forEach((wrap) => {
+        if (wrap._timelineCardTweens) {
+          wrap._timelineCardTweens.forEach(tween => {
+            if (tween.scrollTrigger) tween.scrollTrigger.kill();
+            tween.kill();
+          });
+          wrap._timelineCardTweens = null;
+        }
+        // Reset rotatie zodat cards recht staan op mobile
+        const cards = wrap.querySelectorAll('.timeline_row .card_component');
+        cards.forEach(card => gsap.set(card, { rotation: 0, clearProps: 'transform' }));
+        // Reset init-flag zodat bij terug naar desktop hij weer init
+        wrap.dataset.timelineCardsInit = '';
+      });
+    };
   });
 }
 
