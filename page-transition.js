@@ -1,4 +1,4 @@
-// ------------------------------------------
+// -----------------------------------------
 // FRISCH PAGE TRANSITIONS (Osmo + Barba)
 // Centrale orchestrator — roept alle init-functies aan via Barba hooks
 // -----------------------------------------
@@ -60,7 +60,6 @@ function initAfterEnterFunctions(next) {
   if (has('.hover-cards_grid')) initHoverCards(nextPage);
   if (has('[data-stagger]')) initStaggerReveal(nextPage);
 
-
   // Refreshes als laatste
   if (hasLenis) lenis.resize();
   if (hasScrollTrigger) ScrollTrigger.refresh();
@@ -75,12 +74,13 @@ function runPageOnceAnimation(next) {
   tl.call(() => { resetPage(next); }, null, 0);
 
   // Stagger reveal op first page load voor [data-load-stagger] wrappers
+  // Alle items uit alle wrappers samengevoegd in één doorlopende stagger
   const loadStaggerWraps = next.querySelectorAll('[data-load-stagger]');
   const allItems = [];
   loadStaggerWraps.forEach((wrap) => {
     allItems.push(...wrap.children);
   });
-  
+
   if (allItems.length) {
     tl.fromTo(allItems, {
       y: 30,
@@ -140,13 +140,14 @@ function runPageEnterAnimation(next) {
     ease: "Power1.easeInOut",
   }, "startEnter");
 
-  // Verzamel alle items van alle [data-load-stagger] wrappers
+  // Stagger reveal voor wrappers met [data-load-stagger]
+  // Alle items uit alle wrappers samengevoegd in één doorlopende stagger
   const loadStaggerWraps = next.querySelectorAll('[data-load-stagger]');
   const allItems = [];
   loadStaggerWraps.forEach((wrap) => {
     allItems.push(...wrap.children);
   });
-  
+
   if (allItems.length) {
     tl.fromTo(allItems, {
       y: 30,
@@ -290,7 +291,6 @@ function killPageAnimations(container) {
 
   // Kill stagger reveal
   if (typeof killStaggerReveal === 'function') killStaggerReveal(container);
-
 }
 
 // -----------------------------------------
