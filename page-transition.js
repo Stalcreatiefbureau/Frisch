@@ -59,7 +59,6 @@ function initAfterEnterFunctions(next) {
   if (has('.section_gallery')) initGalleryReveal(nextPage);
   if (has('.hover-cards_grid')) initHoverCards(nextPage);
 
-
   // Refreshes als laatste
   if (hasLenis) lenis.resize();
   if (hasScrollTrigger) ScrollTrigger.refresh();
@@ -250,12 +249,11 @@ function killPageAnimations(container) {
   // Kill gallery reveal
   if (typeof killGalleryReveal === 'function') killGalleryReveal(container);
 
-  // Kill Vimeo bg players
-  if (typeof killVimeoBGVideo === 'function') killVimeoBGVideo(container);
-
-  // Kill Hover cards
+  // Kill hover cards
   if (typeof killHoverCards === 'function') killHoverCards(container);
 
+  // Kill Vimeo bg players
+  if (typeof killVimeoBGVideo === 'function') killVimeoBGVideo(container);
 }
 
 // -----------------------------------------
