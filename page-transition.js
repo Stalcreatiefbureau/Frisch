@@ -1,4 +1,4 @@
-// -----------------------------------------
+/ -----------------------------------------
 // FRISCH PAGE TRANSITIONS (Osmo + Barba)
 // Centrale orchestrator — roept alle init-functies aan via Barba hooks
 // -----------------------------------------
@@ -58,7 +58,7 @@ function initAfterEnterFunctions(next) {
   if (has('.timeline_wrap')) initTimelineCards(nextPage);
   if (has('.section_gallery')) initGalleryReveal(nextPage);
   if (has('.hover-cards_grid')) initHoverCards(nextPage);
-  if (has('[data-stagger]')) initStaggerReveal(nextPage);
+
 
   // Refreshes als laatste
   if (hasLenis) lenis.resize();
@@ -118,23 +118,15 @@ function runPageEnterAnimation(next) {
     ease: "Power1.easeInOut",
   }, "startEnter");
 
-  // Stagger reveal voor wrappers met [data-load-stagger]
-  const loadStaggerWraps = next.querySelectorAll('[data-load-stagger]');
-  loadStaggerWraps.forEach((wrap) => {
-    const items = wrap.children;
-    if (!items.length) return;
-    
-    tl.fromTo(items, {
-      y: 30,
-      autoAlpha: 0,
+  const h1 = next.querySelector('h1');
+  if (h1) {
+    tl.fromTo(h1, {
+      yPercent: 25, autoAlpha: 0,
     }, {
-      y: 0,
-      autoAlpha: 1,
-      ease: "expo.out",
-      duration: 0.6,
-      stagger: 0.06,
+      yPercent: 0, autoAlpha: 1,
+      ease: "expo.out", duration: 1,
     }, "< 0.75");
-  });
+  }
 
   tl.add("pageReady");
   tl.call(resetPage, [next], "pageReady");
@@ -258,14 +250,12 @@ function killPageAnimations(container) {
   // Kill gallery reveal
   if (typeof killGalleryReveal === 'function') killGalleryReveal(container);
 
-  // Kill hover cards
-  if (typeof killHoverCards === 'function') killHoverCards(container);
-
-  // Kill stagger reveal
-  if (typeof killStaggerReveal === 'function') killStaggerReveal(container);
-
   // Kill Vimeo bg players
   if (typeof killVimeoBGVideo === 'function') killVimeoBGVideo(container);
+
+  // Kill Hover cards
+  if (typeof killHoverCards === 'function') killHoverCards(container);
+
 }
 
 // -----------------------------------------
