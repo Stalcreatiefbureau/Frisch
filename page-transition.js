@@ -28,69 +28,6 @@ CustomEase.create("osmo", "0.625, 0.05, 0, 1");
 gsap.defaults({ ease: "osmo", duration: durationDefault });
 
 // -----------------------------------------
-// PAGE ENTER ANIMATION REGISTRY
-// -----------------------------------------
-// Voeg hier per pagina een entrance animatie toe.
-// Trigger door op de barba-container te zetten:
-//   <div data-barba="container" data-page-enter="hero-reveal">
-//
-// De functie krijgt (container, tl, startLabel) mee:
-//   - container  = de barba-container van de inkomende pagina
-//   - tl         = de timeline van runPageEnterAnimation (voeg jouw tweens hieraan toe)
-//   - startLabel = label op de timeline waar de pagina zichtbaar wordt ("startEnter")
-//                  gebruik dit als positie-parameter (bv. "< 0.75" of startLabel + "+=0.5")
-// -----------------------------------------
-
-const pageEnterAnimations = {
-
-  "hero-reveal": (container, tl, startLabel) => {
-    const h1 = container.querySelector('h1');
-    if (!h1) return;
-
-    tl.fromTo(h1, {
-      y: 40, autoAlpha: 0,
-    }, {
-      y: 0, autoAlpha: 1,
-      ease: "expo.out",
-      duration: 1,
-    }, "< 0.75");
-  },
-
-  "content-stagger": (container, tl, startLabel) => {
-    const wrap = container.querySelector('.content_wrap');
-    if (!wrap) return;
-    const items = wrap.children;
-    if (!items.length) return;
-
-    tl.fromTo(items, {
-      y: 30, autoAlpha: 0,
-    }, {
-      y: 0, autoAlpha: 1,
-      ease: "expo.out",
-      duration: 1,
-      stagger: 0.1,
-    }, "< 0.75");
-  },
-
-  // Voeg hier nieuwe varianten toe per template, bv:
-  // "case-study-reveal": (container, tl, startLabel) => { ... },
-
-};
-
-function runRegisteredPageEnter(container, tl, startLabel) {
-  const key = container?.dataset?.pageEnter;
-  if (!key) return;
-
-  const animation = pageEnterAnimations[key];
-  if (typeof animation !== "function") {
-    console.warn(`[page-enter] Geen animatie gevonden voor data-page-enter="${key}"`);
-    return;
-  }
-
-  animation(container, tl, startLabel);
-}
-
-// -----------------------------------------
 // FUNCTION REGISTRY
 // -----------------------------------------
 
@@ -166,9 +103,6 @@ function runPageEnterAnimation(next) {
 
   if (reducedMotion || !transitionSVGPath?.length) {
     tl.set(next, { autoAlpha: 1 });
-    tl.add("startEnter");
-    // Custom page enter animatie (indien data-page-enter aanwezig)
-    runRegisteredPageEnter(next, tl, "startEnter");
     tl.add("pageReady");
     tl.call(resetPage, [next], "pageReady");
     return new Promise(resolve => tl.call(resolve, null, "pageReady"));
@@ -184,9 +118,15 @@ function runPageEnterAnimation(next) {
     ease: "Power1.easeInOut",
   }, "startEnter");
 
-  // Custom page enter animatie (indien data-page-enter aanwezig)
-  // Geen standaard .content_wrap stagger meer — alles draait via de registry
-  runRegisteredPageEnter(next, tl, "startEnter");
+  const h1 = next.querySelector('h1');
+  if (h1) {
+    tl.fromTo(h1, {
+      yPercent: 25, autoAlpha: 0,
+    }, {
+      yPercent: 0, autoAlpha: 1,
+      ease: "expo.out", duration: 1,
+    }, "< 0.75");
+  }
 
   tl.add("pageReady");
   tl.call(resetPage, [next], "pageReady");
