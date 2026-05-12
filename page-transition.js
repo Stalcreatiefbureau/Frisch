@@ -118,15 +118,23 @@ function runPageEnterAnimation(next) {
     ease: "Power1.easeInOut",
   }, "startEnter");
 
-  const h1 = next.querySelector('h1');
-  if (h1) {
-    tl.fromTo(h1, {
-      yPercent: 25, autoAlpha: 0,
+  // Stagger reveal voor wrappers met [data-load-stagger]
+  const loadStaggerWraps = next.querySelectorAll('[data-load-stagger]');
+  loadStaggerWraps.forEach((wrap) => {
+    const items = wrap.children;
+    if (!items.length) return;
+    
+    tl.fromTo(items, {
+      y: 30,
+      autoAlpha: 0,
     }, {
-      yPercent: 0, autoAlpha: 1,
-      ease: "expo.out", duration: 1,
+      y: 0,
+      autoAlpha: 1,
+      ease: "expo.out",
+      duration: 1,
+      stagger: 0.1,
     }, "< 0.75");
-  }
+  });
 
   tl.add("pageReady");
   tl.call(resetPage, [next], "pageReady");
