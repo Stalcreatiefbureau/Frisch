@@ -56,6 +56,8 @@ function initAfterEnterFunctions(next) {
   if (has('[data-vimeo-bg-init]')) initVimeoBGVideo(nextPage);
   if (has('[data-draw-scroll-wrap]')) initDrawPathOnScroll(nextPage);
   if (has('.timeline_wrap')) initTimelineCards(nextPage);
+  if (has('.section_gallery')) initGalleryReveal(nextPage);
+  if (has('[data-stagger]')) initStaggerReveal(nextPage);
 
   // Refreshes als laatste
   if (hasLenis) lenis.resize();
@@ -244,6 +246,12 @@ function killPageAnimations(container) {
   // Kill timeline cards
   if (typeof killTimelineCards === 'function') killTimelineCards(container);
 
+  // Kill gallery reveal
+  if (typeof killGalleryReveal === 'function') killGalleryReveal(container);
+
+  // Kill stagger reveals
+  if (typeof killStaggerReveal === 'function') killStaggerReveal(container);
+
   // Kill Vimeo bg players
   if (typeof killVimeoBGVideo === 'function') killVimeoBGVideo(container);
 }
@@ -265,7 +273,6 @@ function closeAllNavDropdowns() {
     if (list) list.classList.remove('w--open');
   });
 
-  // Standalone toggle/list elementen die nog open staan
   document.querySelectorAll('.w-dropdown-toggle.w--open').forEach(toggle => {
     toggle.classList.remove('w--open');
     toggle.setAttribute('aria-expanded', 'false');
@@ -274,7 +281,6 @@ function closeAllNavDropdowns() {
     list.classList.remove('w--open');
   });
 
-  // Mobile hamburger menu
   document.querySelectorAll('.w-nav-button.w--open').forEach(btn => {
     btn.classList.remove('w--open');
     btn.setAttribute('aria-expanded', 'false');
@@ -286,7 +292,6 @@ function closeAllNavDropdowns() {
     menu.classList.remove('w--open');
   });
 
-  // Body class die Webflow soms zet voor mobile menu
   document.body.classList.remove('w--nav-menu-open');
 }
 
