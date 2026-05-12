@@ -58,8 +58,6 @@ function initAfterEnterFunctions(next) {
   if (has('.timeline_wrap')) initTimelineCards(nextPage);
   if (has('.section_gallery')) initGalleryReveal(nextPage);
   if (has('.hover-cards_grid')) initHoverCards(nextPage);
-  if (has('[data-stagger]')) initStaggerReveal(nextPage);
-
 
 
   // Refreshes als laatste
@@ -257,9 +255,6 @@ function killPageAnimations(container) {
 
   // Kill Hover cards
   if (typeof killHoverCards === 'function') killHoverCards(container);
-
-  // Kill stagger reveal
-  if (typeof killStaggerReveal === 'function') killStaggerReveal(container);
 
 }
 
