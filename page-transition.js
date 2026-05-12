@@ -57,7 +57,6 @@ function initAfterEnterFunctions(next) {
   if (has('[data-draw-scroll-wrap]')) initDrawPathOnScroll(nextPage);
   if (has('.timeline_wrap')) initTimelineCards(nextPage);
   if (has('.section_gallery')) initGalleryReveal(nextPage);
-  if (has('[data-stagger]')) initStaggerReveal(nextPage);
 
   // Refreshes als laatste
   if (hasLenis) lenis.resize();
@@ -248,9 +247,6 @@ function killPageAnimations(container) {
 
   // Kill gallery reveal
   if (typeof killGalleryReveal === 'function') killGalleryReveal(container);
-
-  // Kill stagger reveals
-  if (typeof killStaggerReveal === 'function') killStaggerReveal(container);
 
   // Kill Vimeo bg players
   if (typeof killVimeoBGVideo === 'function') killVimeoBGVideo(container);
