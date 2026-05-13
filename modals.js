@@ -2,10 +2,13 @@
 // FRISCH MODAL — werkt voor zowel single modals (ID-based)
 // als CMS modals (relatief binnen parent) (Barba-compatible)
 // ============================================
+// Bij openen wordt de modal verplaatst naar document.body om problemen
+// met parent containing blocks (transform, filter, will-change) te voorkomen.
+// Bij sluiten wordt de modal teruggeplaatst naar zijn originele parent.
+// ============================================
 
 function setupModals(container = document) {
   const openTriggers = container.querySelectorAll('[data-modal-open]');
-
   openTriggers.forEach(trigger => {
     if (trigger.dataset.modalTriggerInit === 'true') return;
     trigger.dataset.modalTriggerInit = 'true';
@@ -13,7 +16,6 @@ function setupModals(container = document) {
     trigger.addEventListener('click', (e) => {
       e.preventDefault();
       const modalId = trigger.getAttribute('data-modal-open');
-
       let modal;
 
       if (modalId) {
@@ -58,6 +60,17 @@ function setupModals(container = document) {
 function openModal(modal) {
   if (!modal) return;
 
+  // Bewaar originele parent + positie zodat we de modal kunnen teruggeven
+  if (!modal._originalParent) {
+    modal._originalParent = modal.parentElement;
+    modal._originalNextSibling = modal.nextElementSibling;
+  }
+
+  // Verplaats modal naar body zodat geen enkele parent een containing block kan zijn
+  if (modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+
   modal.classList.add('is-active');
   document.body.classList.add('modal-open');
 
@@ -68,7 +81,6 @@ function openModal(modal) {
     { opacity: 0 },
     { opacity: 1, duration: 0.3, ease: 'power2.out' }
   );
-
   gsap.fromTo(content,
     { opacity: 0, y: 30 },
     { opacity: 1, y: 0, duration: 0.4, ease: 'power3.out' }
@@ -88,6 +100,18 @@ function closeModal(modal) {
     onComplete: () => {
       modal.classList.remove('is-active');
       document.body.classList.remove('modal-open');
+
+      // Plaats modal terug naar zijn originele plek in de DOM
+      if (modal._originalParent) {
+        if (modal._originalNextSibling && modal._originalParent.contains(modal._originalNextSibling)) {
+          modal._originalParent.insertBefore(modal, modal._originalNextSibling);
+        } else {
+          modal._originalParent.appendChild(modal);
+        }
+        // Reset zodat de bewaarde refs niet stale worden na page transition
+        modal._originalParent = null;
+        modal._originalNextSibling = null;
+      }
     }
   });
 }
