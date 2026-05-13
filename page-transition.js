@@ -59,8 +59,7 @@ function initAfterEnterFunctions(next) {
   if (has('.section_gallery')) initGalleryReveal(nextPage);
   if (has('.hover-cards_grid')) initHoverCards(nextPage);
   if (has('[data-stagger]')) initStaggerReveal(nextPage);
-  if (has('[data-draw-line]')) initDrawRandomUnderline(nextPage);
-
+  
   // Refreshes als laatste
   if (hasLenis) lenis.resize();
   if (hasScrollTrigger) ScrollTrigger.refresh();
@@ -296,8 +295,6 @@ function killPageAnimations(container) {
   // Kill stagger reveal
   if (typeof killStaggerReveal === 'function') killStaggerReveal(container);
 
-  // Kill draw random underline
-  if (typeof killDrawRandomUnderline === 'function') killDrawRandomUnderline(container);
 }
 
 // -----------------------------------------
