@@ -82,6 +82,10 @@ function initStaggerReveal(container = document) {
           start: startPos,
           toggleActions: 'play none none none',
           once: true
+        },
+        onComplete: function() {
+          // Ruim inline styles op zodat andere CSS (zoals filters) zonder !important kan werken
+          gsap.set(items, { clearProps: 'opacity,transform,translate,rotate,scale' });
         }
       }
     );
