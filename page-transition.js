@@ -33,6 +33,12 @@ gsap.defaults({ ease: "osmo", duration: durationDefault });
 
 function initOnceFunctions() {
   initLenis();
+
+  // Init draw underline alleen op first load (nav/footer staan buiten Barba container)
+  if (document.querySelector('[data-draw-line]')) {
+    initDrawRandomUnderline(document);
+  }
+
   if (onceFunctionsInitialized) return;
   onceFunctionsInitialized = true;
 }
@@ -59,7 +65,8 @@ function initAfterEnterFunctions(next) {
   if (has('.section_gallery')) initGalleryReveal(nextPage);
   if (has('.hover-cards_grid')) initHoverCards(nextPage);
   if (has('[data-stagger]')) initStaggerReveal(nextPage);
-  
+  if (has('.portfolio_images-wrap')) initPortfolioReveal(nextPage);
+
   // Refreshes als laatste
   if (hasLenis) lenis.resize();
   if (hasScrollTrigger) ScrollTrigger.refresh();
@@ -295,6 +302,8 @@ function killPageAnimations(container) {
   // Kill stagger reveal
   if (typeof killStaggerReveal === 'function') killStaggerReveal(container);
 
+  // Kill portfolio reveal
+  if (typeof killPortfolioReveal === 'function') killPortfolioReveal(container);
 }
 
 // -----------------------------------------
