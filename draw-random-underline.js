@@ -1,6 +1,22 @@
-gsap.registerPlugin(DrawSVGPlugin);
+// ============================================
+// FRISCH DRAW RANDOM UNDERLINE (Barba-compatible)
+// ============================================
+// Bij hover op een element met [data-draw-line] wordt een random SVG
+// underline getekend in een child element met [data-draw-line-box].
+// Bij mouseleave wordt de underline weer uitgetekend.
+//
+// USAGE:
+//   <span data-draw-line>
+//     <span>tekst</span>
+//     <span data-draw-line-box></span>
+//   </span>
+// ============================================
 
-function initDrawRandomUnderline() {
+function initDrawRandomUnderline(container = document) {
+  if (typeof gsap === 'undefined') return;
+  if (typeof DrawSVGPlugin === 'undefined') return;
+
+  gsap.registerPlugin(DrawSVGPlugin);
 
   const svgVariants = [
     `<svg width="310" height="40" viewBox="0 0 310 40" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 20.9999C26.7762 16.2245 49.5532 11.5572 71.7979 14.6666C84.9553 16.5057 97.0392 21.8432 109.987 24.3888C116.413 25.6523 123.012 25.5143 129.042 22.6388C135.981 19.3303 142.586 15.1422 150.092 13.3333C156.799 11.7168 161.702 14.6225 167.887 16.8333C181.562 21.7212 194.975 22.6234 209.252 21.3888C224.678 20.0548 239.912 17.991 255.42 18.3055C272.027 18.6422 288.409 18.867 305 17.9999" stroke="currentColor" stroke-width="10" stroke-linecap="round"/></svg>`,
@@ -21,24 +37,28 @@ function initDrawRandomUnderline() {
 
   let nextIndex = null;
 
-  document.querySelectorAll('[data-draw-line]').forEach(container => {
-    const box = container.querySelector('[data-draw-line-box]');
+  const containers = container.querySelectorAll('[data-draw-line]');
+  if (!containers.length) return;
+
+  containers.forEach(item => {
+    // Anti-dubbel-init
+    if (item.dataset.drawLineInit === 'true') return;
+    item.dataset.drawLineInit = 'true';
+
+    const box = item.querySelector('[data-draw-line-box]');
     if (!box) return;
 
     let enterTween = null;
     let leaveTween = null;
 
-    container.addEventListener('mouseenter', () => {
-      // Don't restart if still playing
+    const onMouseEnter = () => {
       if (enterTween && enterTween.isActive()) return;
       if (leaveTween && leaveTween.isActive()) leaveTween.kill();
 
-      // Random Start
       if (nextIndex === null) {
         nextIndex = Math.floor(Math.random() * svgVariants.length);
       }
 
-      // Animate Draw
       box.innerHTML = svgVariants[nextIndex];
       const svg = box.querySelector('svg');
       if (svg) {
@@ -55,16 +75,14 @@ function initDrawRandomUnderline() {
         }
       }
 
-      // Advance for next hover across all items
       nextIndex = (nextIndex + 1) % svgVariants.length;
-    });
+    };
 
-    container.addEventListener('mouseleave', () => {
+    const onMouseLeave = () => {
       const path = box.querySelector('path');
       if (!path) return;
 
       const playOut = () => {
-        // Don't restart if still drawing out
         if (leaveTween && leaveTween.isActive()) return;
         leaveTween = gsap.to(path, {
           duration: 0.5,
@@ -72,22 +90,36 @@ function initDrawRandomUnderline() {
           ease: 'power2.inOut',
           onComplete: () => {
             leaveTween = null;
-            box.innerHTML = ''; // remove SVG when done
+            box.innerHTML = '';
           }
         });
       };
 
       if (enterTween && enterTween.isActive()) {
-        // Wait until draw-in finishes
         enterTween.eventCallback('onComplete', playOut);
       } else {
         playOut();
       }
-    });
+    };
+
+    item.addEventListener('mouseenter', onMouseEnter);
+    item.addEventListener('mouseleave', onMouseLeave);
+
+    // Bewaar voor cleanup
+    item._drawLineHandlers = { onMouseEnter, onMouseLeave };
   });
 }
 
-// Initialize Draw Random Underline
-document.addEventListener('DOMContentLoaded', function() {
-  initDrawRandomUnderline();
-});
+// ============================================
+// CLEANUP bij page leave
+// ============================================
+function killDrawRandomUnderline(container = document) {
+  const items = container.querySelectorAll('[data-draw-line]');
+  items.forEach(item => {
+    if (item._drawLineHandlers) {
+      item.removeEventListener('mouseenter', item._drawLineHandlers.onMouseEnter);
+      item.removeEventListener('mouseleave', item._drawLineHandlers.onMouseLeave);
+      item._drawLineHandlers = null;
+    }
+  });
+}
