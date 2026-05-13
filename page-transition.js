@@ -204,6 +204,9 @@ barba.hooks.enter(data => {
 barba.hooks.afterEnter(data => {
   initAfterEnterFunctions(data.next.container);
 
+  // Re-init Webflow's eigen JS (dropdowns, navigatie, IX2, sliders, etc)
+  resetWebflow(data);
+
   if (hasLenis) {
     lenis.resize();
     lenis.start();
@@ -291,6 +294,28 @@ function killPageAnimations(container) {
 
   // Kill stagger reveal
   if (typeof killStaggerReveal === 'function') killStaggerReveal(container);
+}
+
+// -----------------------------------------
+// WEBFLOW RE-INIT — voor dropdowns, IX2, navigatie na page transition
+// -----------------------------------------
+
+function resetWebflow(data) {
+  if (typeof Webflow === 'undefined') return;
+
+  // Pak het nieuwe HTML van de Barba data en lees het data-wf-page attribuut
+  const parser = new DOMParser();
+  const dom = parser.parseFromString(data.next.html, 'text/html');
+  const webflowPageId = dom.querySelector('html').getAttribute('data-wf-page');
+
+  if (webflowPageId) {
+    document.documentElement.setAttribute('data-wf-page', webflowPageId);
+  }
+
+  // Destroy en re-init Webflow's eigen modules
+  Webflow.destroy();
+  Webflow.ready();
+  Webflow.require('ix2')?.init();
 }
 
 // -----------------------------------------
