@@ -66,7 +66,8 @@ function initPortfolioSlider(container = document) {
       const distance = Math.abs(slideCenter - wrapCenter);
       const maxDistance = slide.offsetWidth;
 
-      const adjustedDistance = Math.max(0, distance - 2);
+      // Grotere deadzone (30px) — slides die "ongeveer in het midden" zijn worden volledig actief
+      const adjustedDistance = Math.max(0, distance - 30);
       const progress = Math.min(adjustedDistance / maxDistance, 1);
 
       const scale = 1 - (0.15 * progress);
@@ -211,6 +212,14 @@ function initPortfolioSlider(container = document) {
 
   // === INIT ===
   gsap.set(track, { x: getOffset(currentIndex) });
-  updateSlidesByPosition();
-  startAutoplay();
+
+  // Wacht 2 frames zodat alle DOM dimensies correct zijn berekend
+  // voordat we de actieve slide bepalen en autoplay starten
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      gsap.set(track, { x: getOffset(currentIndex) });
+      updateSlidesByPosition();
+      startAutoplay();
+    });
+  });
 }
