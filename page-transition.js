@@ -70,7 +70,7 @@ function initAfterEnterFunctions(next) {
   if (has('[data-stagger]')) initStaggerReveal(nextPage);
   if (has('.portfolio_images-wrap')) initPortfolioReveal(nextPage);
 
-  // Uploadcare uploader (web components) — loader één keer globaal, daarna self-upgrade
+  // Uploadcare uploader — loader opnieuw uitvoeren in de nieuwe container
   if (has('uc-config, uc-file-uploader-regular, uc-file-uploader-minimal, uc-file-uploader-inline, lr-config, lr-file-uploader-regular, [role="uploadcare-uploader"]')) initUploadcare(nextPage);
 
   // Refreshes als laatste
@@ -444,16 +444,25 @@ function initBarbaNavUpdate(data) {
 }
 
 // -----------------------------------------
-// UPLOADCARE — loader opnieuw uitvoeren bij elke page enter,
-// zodat de uploader in de nieuwe Barba-container opnieuw mount.
+// UPLOADCARE — DEBUG VERSIE
+// Loader opnieuw uitvoeren bij elke page enter, met logging zodat je
+// in de console precies ziet wat er gebeurt.
 // -----------------------------------------
 
 function initUploadcare(container) {
+  const scope = container || document;
+  const el = scope.querySelector('uc-config, uc-file-uploader-regular, uc-file-uploader-minimal, uc-file-uploader-inline, lr-config, lr-file-uploader-regular, [role="uploadcare-uploader"]');
+  console.log('[UC] initUploadcare aangeroepen — element gevonden:', el);
+  if (!el) return;
+
   const old = document.querySelector('script[data-uploadcare-loader]');
   if (old) old.remove();
 
   const s = document.createElement('script');
   s.src = UPLOADCARE_LOADER_SRC;
   s.setAttribute('data-uploadcare-loader', '');
+  s.onload = () => console.log('[UC] loader.js geladen + uitgevoerd');
+  s.onerror = (e) => console.error('[UC] loader.js laadfout', e);
   document.head.appendChild(s);
+  console.log('[UC] loader.js geïnjecteerd in <head>');
 }
