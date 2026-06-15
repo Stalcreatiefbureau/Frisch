@@ -332,7 +332,12 @@ function resetWebflow(data) {
   Webflow.destroy();
   Webflow.ready();
   Webflow.require('ix2')?.init();
+
+  // Cruciaal: hiermee binden Webflow's componenten (dropdowns, nav, IX2)
+  // zich volledig opnieuw — zonder dit blijft de eerste hover "hangen".
+  document.dispatchEvent(new Event('readystatechange'));
 }
+
 
 // -----------------------------------------
 // NAV CLEANUP — sluit dropdowns + mobile menu
