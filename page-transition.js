@@ -34,6 +34,9 @@ gsap.defaults({ ease: "osmo", duration: durationDefault });
 function initOnceFunctions() {
   initLenis();
 
+  // Bind nav-dropdown hover één keer — overleeft alle Barba-transities
+  initNavDropdownHover();
+
   // Init draw underline alleen op first load (nav/footer staan buiten Barba container)
   if (document.querySelector('[data-draw-line]')) {
     initDrawRandomUnderline(document);
@@ -332,12 +335,7 @@ function resetWebflow(data) {
   Webflow.destroy();
   Webflow.ready();
   Webflow.require('ix2')?.init();
-
-  // Cruciaal: hiermee binden Webflow's componenten (dropdowns, nav, IX2)
-  // zich volledig opnieuw — zonder dit blijft de eerste hover "hangen".
-  document.dispatchEvent(new Event('readystatechange'));
 }
-
 
 // -----------------------------------------
 // NAV CLEANUP — sluit dropdowns + mobile menu
@@ -376,6 +374,36 @@ function closeAllNavDropdowns() {
   });
 
   document.body.classList.remove('w--nav-menu-open');
+}
+
+// -----------------------------------------
+// NAV DROPDOWN HOVER — één keer binden, overleeft alle Barba-transities
+// -----------------------------------------
+
+function initNavDropdownHover() {
+  document.querySelectorAll('.w-dropdown').forEach((dd) => {
+    if (dd._navHoverBound) return;          // anti-dubbel
+    dd._navHoverBound = true;
+
+    const toggle = dd.querySelector('.w-dropdown-toggle');
+    const list = dd.querySelector('.w-dropdown-list');
+
+    const open = () => {
+      dd.classList.add('w--open');
+      toggle?.classList.add('w--open');
+      toggle?.setAttribute('aria-expanded', 'true');
+      list?.classList.add('w--open');
+    };
+    const close = () => {
+      dd.classList.remove('w--open');
+      toggle?.classList.remove('w--open');
+      toggle?.setAttribute('aria-expanded', 'false');
+      list?.classList.remove('w--open');
+    };
+
+    dd.addEventListener('mouseenter', open);
+    dd.addEventListener('mouseleave', close);
+  });
 }
 
 // -----------------------------------------
