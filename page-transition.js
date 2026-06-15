@@ -65,7 +65,6 @@ function initAfterEnterFunctions(next) {
   if (has('.section_gallery')) initGalleryReveal(nextPage);
   if (has('.hover-cards_grid')) initHoverCards(nextPage);
   if (has('[data-stagger]')) initStaggerReveal(nextPage);
-  if (has('.portfolio_images-wrap')) initPortfolioReveal(nextPage);
 
   // Refreshes als laatste
   if (hasLenis) lenis.resize();
@@ -79,6 +78,9 @@ function initAfterEnterFunctions(next) {
 function runPageOnceAnimation(next) {
   const tl = gsap.timeline();
   tl.call(() => { resetPage(next); }, null, 0);
+
+  // Portfolio reveal meteen op first load
+  tl.call(() => initPortfolioReveal(next), null, 0);
 
   // Stagger reveal op first page load voor [data-load-stagger] wrappers
   // Alle items uit alle wrappers samengevoegd in één doorlopende stagger
@@ -132,6 +134,7 @@ function runPageEnterAnimation(next) {
 
   if (reducedMotion || !transitionSVGPath?.length) {
     tl.set(next, { autoAlpha: 1 });
+    tl.call(() => initPortfolioReveal(next), null, 0);
     tl.add("pageReady");
     tl.call(resetPage, [next], "pageReady");
     return new Promise(resolve => tl.call(resolve, null, "pageReady"));
@@ -146,6 +149,9 @@ function runPageEnterAnimation(next) {
     strokeWidth: "5%",
     ease: "Power1.easeInOut",
   }, "startEnter");
+
+  // Portfolio reveal start exact op het reveal-moment
+  tl.call(() => initPortfolioReveal(next), null, "startEnter");
 
   // Stagger reveal voor wrappers met [data-load-stagger]
   // Alle items uit alle wrappers samengevoegd in één doorlopende stagger
