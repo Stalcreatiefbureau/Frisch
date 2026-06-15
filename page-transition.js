@@ -27,9 +27,6 @@ let durationDefault = 0.6;
 CustomEase.create("osmo", "0.625, 0.05, 0, 1");
 gsap.defaults({ ease: "osmo", duration: durationDefault });
 
-// Uploadcare loader (vervangt de losse <script> in Webflow)
-const UPLOADCARE_LOADER_SRC = "https://pub-a7157a23b0074abc85bdd6ca693ec013.r2.dev/204ea726-59d0-4b2d-a9d5-4a41a375f086/loader.js";
-
 // -----------------------------------------
 // FUNCTION REGISTRY
 // -----------------------------------------
@@ -69,9 +66,6 @@ function initAfterEnterFunctions(next) {
   if (has('.hover-cards_grid')) initHoverCards(nextPage);
   if (has('[data-stagger]')) initStaggerReveal(nextPage);
   if (has('.portfolio_images-wrap')) initPortfolioReveal(nextPage);
-
-  // Uploadcare uploader — loader opnieuw uitvoeren in de nieuwe container
-  if (has('uc-config, uc-file-uploader-regular, uc-file-uploader-minimal, uc-file-uploader-inline, lr-config, lr-file-uploader-regular, [role="uploadcare-uploader"]')) initUploadcare(nextPage);
 
   // Refreshes als laatste
   if (hasLenis) lenis.resize();
@@ -441,28 +435,4 @@ function initBarbaNavUpdate(data) {
     const newClassList = next.getAttribute('class') || '';
     curr.setAttribute('class', newClassList);
   });
-}
-
-// -----------------------------------------
-// UPLOADCARE — DEBUG VERSIE
-// Loader opnieuw uitvoeren bij elke page enter, met logging zodat je
-// in de console precies ziet wat er gebeurt.
-// -----------------------------------------
-
-function initUploadcare(container) {
-  const scope = container || document;
-  const el = scope.querySelector('uc-config, uc-file-uploader-regular, uc-file-uploader-minimal, uc-file-uploader-inline, lr-config, lr-file-uploader-regular, [role="uploadcare-uploader"]');
-  console.log('[UC] initUploadcare aangeroepen — element gevonden:', el);
-  if (!el) return;
-
-  const old = document.querySelector('script[data-uploadcare-loader]');
-  if (old) old.remove();
-
-  const s = document.createElement('script');
-  s.src = UPLOADCARE_LOADER_SRC;
-  s.setAttribute('data-uploadcare-loader', '');
-  s.onload = () => console.log('[UC] loader.js geladen + uitgevoerd');
-  s.onerror = (e) => console.error('[UC] loader.js laadfout', e);
-  document.head.appendChild(s);
-  console.log('[UC] loader.js geïnjecteerd in <head>');
 }
