@@ -444,21 +444,16 @@ function initBarbaNavUpdate(data) {
 }
 
 // -----------------------------------------
-// UPLOADCARE — loader één keer globaal injecteren
-// Web components (<uc-*>) upgraden zichzelf daarna automatisch bij elke
-// Barba-transitie, dus geen re-init per pagina nodig.
+// UPLOADCARE — loader opnieuw uitvoeren bij elke page enter,
+// zodat de uploader in de nieuwe Barba-container opnieuw mount.
 // -----------------------------------------
 
-function ensureUploadcareLoaded() {
-  if (window.__ucLoaderInjected) return;        // idempotent: maar één keer
-  window.__ucLoaderInjected = true;
+function initUploadcare(container) {
+  const old = document.querySelector('script[data-uploadcare-loader]');
+  if (old) old.remove();
+
   const s = document.createElement('script');
   s.src = UPLOADCARE_LOADER_SRC;
-  s.defer = true;
   s.setAttribute('data-uploadcare-loader', '');
   document.head.appendChild(s);
-}
-
-function initUploadcare(container) {
-  ensureUploadcareLoaded();
 }
