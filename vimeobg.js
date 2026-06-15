@@ -1,48 +1,46 @@
 function initVimeoBGVideo() {
-  // Select all elements that have [data-vimeo-bg-init]
+  // SDK-check
+  if (typeof Vimeo === 'undefined') {
+    console.warn('Vimeo SDK niet geladen — controleer of player.js vóór dit script staat.');
+    return;
+  }
+
   const vimeoPlayers = document.querySelectorAll('[data-vimeo-bg-init]');
 
   vimeoPlayers.forEach(function(vimeoElement, index) {
-    
-    // Add Vimeo URL ID to the iframe [src]
-    // Looks like: https://player.vimeo.com/video/1019191082
+    // Skip elementen die al geïnitialiseerd zijn (voorkomt dubbele init na Barba)
+    if (vimeoElement.dataset.vimeoInitialized === 'true') return;
+    vimeoElement.dataset.vimeoInitialized = 'true';
+
     const vimeoVideoID = vimeoElement.getAttribute('data-vimeo-video-id');
     if (!vimeoVideoID) return;
+
+    const iframe = vimeoElement.querySelector('iframe');
+    if (!iframe) {
+      console.warn('Geen iframe gevonden in', vimeoElement);
+      return;
+    }
+
     const vimeoVideoURL = `https://player.vimeo.com/video/${vimeoVideoID}?api=1&background=1&autoplay=1&loop=1&muted=1`;
-    vimeoElement.querySelector('iframe').setAttribute('src', vimeoVideoURL);
+    iframe.setAttribute('src', vimeoVideoURL);
 
-    // Assign an ID to each element
-    const videoIndexID = 'vimeo-bg-basic-index-' + index;
-    vimeoElement.setAttribute('id', videoIndexID);
+    // Unieke ID per element (gebruik bestaande ID indien aanwezig)
+    if (!vimeoElement.id) {
+      vimeoElement.setAttribute('id', 'vimeo-bg-basic-index-' + index);
+    }
 
-    const iframeID = vimeoElement.id;
-    const player = new Vimeo.Player(iframeID);
-
+    const player = new Vimeo.Player(vimeoElement.id);
     player.setVolume(0);
-    
+
     player.on('bufferend', function() {
       vimeoElement.setAttribute('data-vimeo-activated', 'true');
       vimeoElement.setAttribute('data-vimeo-loaded', 'true');
     });
-    
-    // Update Aspect Ratio if [data-vimeo-update-size="true"]
-    let videoAspectRatio;
-    if (vimeoElement.getAttribute('data-vimeo-update-size') === 'true') {
-      player.getVideoWidth().then(function(width) {
-        player.getVideoHeight().then(function(height) {
-          videoAspectRatio = height / width;
-          const beforeEl = vimeoElement.querySelector('.vimeo-bg__before');
-          if (beforeEl) {
-            beforeEl.style.paddingTop = videoAspectRatio * 100 + '%';
-          }
-        });
-      });
-    }
 
-    // Function to adjust video sizing
+    let videoAspectRatio;
+
     function adjustVideoSizing() {
       const containerAspectRatio = (vimeoElement.offsetHeight / vimeoElement.offsetWidth) * 100;
-
       const iframeWrapper = vimeoElement.querySelector('.vimeo-bg__iframe-wrapper');
       if (iframeWrapper && videoAspectRatio) {
         if (containerAspectRatio > videoAspectRatio * 100) {
@@ -52,23 +50,25 @@ function initVimeoBGVideo() {
         }
       }
     }
-    // Adjust video sizing initially
+
     if (vimeoElement.getAttribute('data-vimeo-update-size') === 'true') {
-      adjustVideoSizing();
-      player.getVideoWidth().then(function() {
-        player.getVideoHeight().then(function() {
-          adjustVideoSizing();
-        });
+      Promise.all([player.getVideoWidth(), player.getVideoHeight()]).then(function([width, height]) {
+        videoAspectRatio = height / width;
+        const beforeEl = vimeoElement.querySelector('.vimeo-bg__before');
+        if (beforeEl) beforeEl.style.paddingTop = videoAspectRatio * 100 + '%';
+        adjustVideoSizing();
       });
     } else {
       adjustVideoSizing();
     }
-    // Adjust video sizing on resize
+
     window.addEventListener('resize', adjustVideoSizing);
   });
 }
 
-// Initialize Vimeo Background Video
-document.addEventListener('DOMContentLoaded', function() {
+// Eerste load — werkt ook als DOMContentLoaded al gevuurd is
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initVimeoBGVideo);
+} else {
   initVimeoBGVideo();
-});
+}
