@@ -27,6 +27,9 @@ let durationDefault = 0.6;
 CustomEase.create("osmo", "0.625, 0.05, 0, 1");
 gsap.defaults({ ease: "osmo", duration: durationDefault });
 
+// Uploadcare loader (vervangt de losse <script> in Webflow)
+const UPLOADCARE_LOADER_SRC = "https://pub-a7157a23b0074abc85bdd6ca693ec013.r2.dev/204ea726-59d0-4b2d-a9d5-4a41a375f086/loader.js";
+
 // -----------------------------------------
 // FUNCTION REGISTRY
 // -----------------------------------------
@@ -66,6 +69,9 @@ function initAfterEnterFunctions(next) {
   if (has('.hover-cards_grid')) initHoverCards(nextPage);
   if (has('[data-stagger]')) initStaggerReveal(nextPage);
   if (has('.portfolio_images-wrap')) initPortfolioReveal(nextPage);
+
+  // Uploadcare uploader (web components) — loader één keer globaal, daarna self-upgrade
+  if (has('uc-config, uc-file-uploader-regular, uc-file-uploader-minimal, uc-file-uploader-inline, lr-config, lr-file-uploader-regular, [role="uploadcare-uploader"]')) initUploadcare(nextPage);
 
   // Refreshes als laatste
   if (hasLenis) lenis.resize();
@@ -435,4 +441,24 @@ function initBarbaNavUpdate(data) {
     const newClassList = next.getAttribute('class') || '';
     curr.setAttribute('class', newClassList);
   });
+}
+
+// -----------------------------------------
+// UPLOADCARE — loader één keer globaal injecteren
+// Web components (<uc-*>) upgraden zichzelf daarna automatisch bij elke
+// Barba-transitie, dus geen re-init per pagina nodig.
+// -----------------------------------------
+
+function ensureUploadcareLoaded() {
+  if (window.__ucLoaderInjected) return;        // idempotent: maar één keer
+  window.__ucLoaderInjected = true;
+  const s = document.createElement('script');
+  s.src = UPLOADCARE_LOADER_SRC;
+  s.defer = true;
+  s.setAttribute('data-uploadcare-loader', '');
+  document.head.appendChild(s);
+}
+
+function initUploadcare(container) {
+  ensureUploadcareLoaded();
 }
