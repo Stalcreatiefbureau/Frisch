@@ -1,5 +1,8 @@
 gsap.registerPlugin(DrawSVGPlugin);
 
+// Buiten de functie: blijft bestaan over transitions heen, zodat de cyclus doorloopt
+let drawNextIndex = null;
+
 function initDrawRandomUnderline() {
 
   const svgVariants = [
@@ -19,9 +22,11 @@ function initDrawRandomUnderline() {
     });
   }
 
-  let nextIndex = null;
-
   document.querySelectorAll('[data-draw-line]').forEach(container => {
+    // Guard: nooit dubbel binden op dezelfde container
+    if (container.dataset.drawInit) return;
+    container.dataset.drawInit = 'true';
+
     const box = container.querySelector('[data-draw-line-box]');
     if (!box) return;
 
@@ -34,12 +39,12 @@ function initDrawRandomUnderline() {
       if (leaveTween && leaveTween.isActive()) leaveTween.kill();
 
       // Random Start
-      if (nextIndex === null) {
-        nextIndex = Math.floor(Math.random() * svgVariants.length);
+      if (drawNextIndex === null) {
+        drawNextIndex = Math.floor(Math.random() * svgVariants.length);
       }
 
       // Animate Draw
-      box.innerHTML = svgVariants[nextIndex];
+      box.innerHTML = svgVariants[drawNextIndex];
       const svg = box.querySelector('svg');
       if (svg) {
         decorateSVG(svg);
@@ -56,7 +61,7 @@ function initDrawRandomUnderline() {
       }
 
       // Advance for next hover across all items
-      nextIndex = (nextIndex + 1) % svgVariants.length;
+      drawNextIndex = (drawNextIndex + 1) % svgVariants.length;
     });
 
     container.addEventListener('mouseleave', () => {
@@ -87,7 +92,20 @@ function initDrawRandomUnderline() {
   });
 }
 
-// Initialize Draw Random Underline
-document.addEventListener('DOMContentLoaded', function() {
+// -----------------------------------------
+// Init: eerste load + na elke Barba-transition
+// -----------------------------------------
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDrawRandomUnderline);
+} else {
   initDrawRandomUnderline();
-});
+}
+
+function registerDrawUnderlineHook() {
+  if (typeof barba !== 'undefined' && barba.hooks) {
+    barba.hooks.afterEnter(initDrawRandomUnderline);
+  } else {
+    setTimeout(registerDrawUnderlineHook, 200);
+  }
+}
+registerDrawUnderlineHook();
