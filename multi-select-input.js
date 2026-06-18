@@ -172,12 +172,6 @@ function initMultiSelect(root = document) {
   });
 }
 
-// Auto-init
-if (document.readyState !== "loading") {
-  initMultiSelect();
-} else {
-  document.addEventListener("DOMContentLoaded", () => initMultiSelect());
-}
-
-// Beschikbaar maken voor Barba-hooks o.i.d.
+// Registry-gedreven: init wordt aangeroepen vanuit je Barba orchestrator
+// (initAfterEnterFunctions -> initMultiSelect(nextPage)). Geen auto-init nodig.
 window.initMultiSelect = initMultiSelect;
