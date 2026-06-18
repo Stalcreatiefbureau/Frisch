@@ -61,6 +61,7 @@ function initAfterEnterFunctions(next) {
   if (has('.slider_wrap')) initPortfolioSlider(nextPage);
   if (has('[data-calc="dienst"]')) initTarievenCalculator(nextPage);
   if (has('[data-form-step]')) initQuotationForm(nextPage);
+  if (has('[data-ms="wrap"]')) initMultiSelect(nextPage);   // ← multi-select
   if (has('[data-modal-open]') || has('[data-modal-parent]')) setupModals(nextPage);
   if (has('[data-vimeo-bg-init]')) initVimeoBGVideo(nextPage);
   if (has('[data-draw-scroll-wrap]')) initDrawPathOnScroll(nextPage);
