@@ -25,8 +25,30 @@
  *   .is-selected   op een option als die geselecteerd is
  */
 
+// Eén gedeelde "klik buiten -> sluiten" listener voor ALLE multi-selects,
+// inclusief die op latere (Barba-)pagina's. Wordt maar één keer gebonden,
+// dus geen opstapelende listeners bij paginanavigatie.
+let msGlobalCloseBound = false;
+function bindGlobalClose() {
+  if (msGlobalCloseBound) return;
+  msGlobalCloseBound = true;
+
+  document.addEventListener("click", (e) => {
+    document.querySelectorAll('[data-ms="wrap"].is-open').forEach((w) => {
+      if (!w.contains(e.target)) {
+        w.classList.remove("is-open");
+        const t = w.querySelector('[data-ms="toggle"]');
+        if (t) t.setAttribute("aria-expanded", "false");
+      }
+    });
+  });
+}
+
 function initMultiSelect(root = document) {
   const wraps = root.querySelectorAll('[data-ms="wrap"]');
+
+  // Globale outside-click één keer activeren
+  bindGlobalClose();
 
   wraps.forEach((wrap) => {
     // Idempotency guard (bv. bij Barba re-init)
@@ -143,10 +165,7 @@ function initMultiSelect(root = document) {
       }
     });
 
-    // Klik buiten -> sluiten
-    document.addEventListener("click", (e) => {
-      if (!wrap.contains(e.target)) close();
-    });
+    // (Outside-click sluiten wordt globaal afgehandeld via bindGlobalClose)
 
     // Init state (pikt vooraf gezette .is-selected classes op)
     sync();
